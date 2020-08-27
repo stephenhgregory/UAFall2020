@@ -103,9 +103,25 @@ jiffies / HZ = seconds
 
 ## 1.16
 ### Director Memory Access (DMA) is used for high-speed IO devices in order to avoid increasing the CPU's execution load. 
-- How does the CPU interface with the device to coordinate the transfer?
+1. How does the CPU interface with the device to coordinate the transfer?
   - To initiate a DMA transfer, the CPU first sets up the DMA registers, which contain a pointer to the source of a transfer, a pointer to the destination of a transfer, and a counter of the number of bytes to be transferred. Then, the DMA controller proceeds to place addresses on the bus to perform transfers, while the CPU is free to do other work.
-- How does the CPU know when the memory operations are complete
+2. How does the CPU know when the memory operations are complete
   - Once the entire transfer is complete, the DMA controller sends an interrupt to the CPU signifying that it is done.
-- The CPU is allowed to execute other programs while the DMA controller is transferring data. Does this process interfere with the execution of the user programs? If so, describe what forms of interference are caused. 
+3. The CPU is allowed to execute other programs while the DMA controller is transferring data. Does this process interfere with the execution of the user programs? If so, describe what forms of interference are caused. 
   - Both the CPU **and** the DMA are what is called *bus masters*, meaning that both of them can control the system bus. Therefore, there would be a problem if both the CPU and the DMA controller wanted to access the memory at the same time. Therefore, the CPU should be momentarily prevented from accessing main memory when the DMA seizes the memory bus. However, if the CPU is still able to access data in its primary and secondary caches, a coherency issue may be created if both the CPU and DMA controller update the same memory locations.
+
+## 1.17
+### Some computer systems do not provide a privileged mode of operation in hardware. Is it possible to construct a secure operating system for these computer systems? Give arguments both that it is and that it is not possible.
+First, we should define security. By secure, we mean that a user program is not able to corrupt the kernel, crash the system, violate memory protection, etc. 
+
+There are several approaches that could be taken. Firstly, one could write a simulator for a processor that does indeed have a kernel mode bit, and running the entire operating system on top of this emulator. However, this is slow. Another variant of this approach would be to run the operating system normally, but to run all user programs only in an emulator (This is the approach used in [Nachos](https://en.wikipedia.org/wiki/Not_Another_Completely_Heuristic_Operating_System)). 
+
+Another approach is to rely on safe languages. Only executing user programs written in a 'safe' language such as Java will work because the properties of the language guarantee the manual, arbitrary writes to memory are not allowed and there is a limited instruction set. Note here that the user doesn't get to choose arbitrary machine code to run - the code that is run is the result of just-in-time compilation of the Java source code. Similar to this approach is running only code which has been produced by a trusted compilter that is known to check memory addresses and not output priviliged instructions.
+
+It is **not** enough to have the kernel scan the user code for bad instructions before executing it, if the code might have been produced by an arbitrary compiler. Firstly, bad instructions are hard to spot - for example, they might be a write instruction which happens to overwrite critical data, but which is not easily identifiable as doing such. Directly executing user code is also dangerous because the user code could be doing something indirect like overwriting itself or writing new code to a new page of memory and then jumping to that new page in memory, and that code would then not be checked for security.
+
+Similarly, asking the processor to check with the OS before executing each instruction doesn't quite work. Processor don't physically have a mode like this, and if if one did, that would basically be the same as having amode bit - there needs to be a way for the processor to know to check user code but not the OS itself. To make this work, you could use a full emulator, as described previously.
+
+## 1.18
+### Many SMP systems have different levels of caches; one level is local to each processing core, and another level is shared among all processing cores. Why are caching systems designed this way?
+One of the main reasons for this design is speed. Local caches are much faster than shared caches. The data that is expected to be used by some processor is put into its local cache, but is also put into the shared cache *if it is not already there* (notice that it is a plausible that it was in the shared cache before it was transferred to the local cache). We put the data into the shared cache so that it can be quickly transferred to the local cache of another processor if its starts some new process which needs this data. Without the shared cache, this operation would be much slower as each processing core would have to pull everything from main memory to get data into its own local cache
