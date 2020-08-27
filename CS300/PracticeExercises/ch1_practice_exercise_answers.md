@@ -146,4 +146,4 @@ We'll say that processor 1 reads data A with a value of 5 from main memory into 
 2. Multiprocessor systems
 3. Distributed systems
 
-1. In a single-processor system, separate local caches must synchronize with eachother by synchronizing themselves with a shared cache
+1. In a single-processor system, separate local caches must synchronize with eachother by synchronizing themselves with a shared cache...
