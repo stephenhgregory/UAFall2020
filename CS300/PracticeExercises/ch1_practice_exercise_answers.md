@@ -93,3 +93,19 @@ We can use two types of clustering:
 ## 1.14
 ### What's the purpose of interrupts? How does an interrupt differ from a trap? Can traps be generated intentionally by a user program? If so, for what purpose?
 Interrupts are hardware-generated change-og-flows used to send signals to the CPU that a service is needed urgently. They literally "interrupt" the CPU so that it will drop what it's doing and summon an interrupt handler to deal with the cause of the interrupt (solve that problem). A trap is simply a software-generated interrupt. 
+
+## 1.15
+### Explain how the Linux kernel variables HZ and jiffies can be used to determine the number of seconds the system has been running since it was booted
+Jiffies is a Linux kernel variable which tells the user the number of timer interrupts that have occurred since system boot up. HZ tells the user the frequency of timer interrupts, or in other words, the number of timer interrupts per second. Therefore, to find the total number of seconds that the system has been turned on, one can simply divide the value stored in the jiffies variable with the value stored in the HZ variable. 
+```
+jiffies / HZ = seconds
+```
+
+## 1.16
+### Director Memory Access (DMA) is used for high-speed IO devices in order to avoid increasing the CPU's execution load. 
+- How does the CPU interface with the device to coordinate the transfer?
+  - To initiate a DMA transfer, the CPU first sets up the DMA registers, which contain a pointer to the source of a transfer, a pointer to the destination of a transfer, and a counter of the number of bytes to be transferred. Then, the DMA controller proceeds to place addresses on the bus to perform transfers, while the CPU is free to do other work.
+- How does the CPU know when the memory operations are complete
+  - Once the entire transfer is complete, the DMA controller sends an interrupt to the CPU signifying that it is done.
+- The CPU is allowed to execute other programs while the DMA controller is transferring data. Does this process interfere with the execution of the user programs? If so, describe what forms of interference are caused. 
+  - Both the CPU **and** the DMA are what is called *bus masters*, meaning that both of them can control the system bus. Therefore, there would be a problem if both the CPU and the DMA controller wanted to access the memory at the same time. Therefore, the CPU should be momentarily prevented from accessing main memory when the DMA seizes the memory bus. However, if the CPU is still able to access data in its primary and secondary caches, a coherency issue may be created if both the CPU and DMA controller update the same memory locations.
