@@ -125,3 +125,25 @@ Similarly, asking the processor to check with the OS before executing each instr
 ## 1.18
 ### Many SMP systems have different levels of caches; one level is local to each processing core, and another level is shared among all processing cores. Why are caching systems designed this way?
 One of the main reasons for this design is speed. Local caches are much faster than shared caches. The data that is expected to be used by some processor is put into its local cache, but is also put into the shared cache *if it is not already there* (notice that it is a plausible that it was in the shared cache before it was transferred to the local cache). We put the data into the shared cache so that it can be quickly transferred to the local cache of another processor if its starts some new process which needs this data. Without the shared cache, this operation would be much slower as each processing core would have to pull everything from main memory to get data into its own local cache
+
+## 1.19 
+### Rank the following storage systems from slowest to fastest
+1. (slowest) Magnetic tapes
+2. Optical disk
+3. Hard-disk drives
+4. Nonvolatile memory
+5. Main memory
+6. Cache
+7. Registers
+
+## 1.20
+### Consider an SMP system. Illustrate with an example how data residing in memory could in fact have a different value in each of the local caches.
+We'll say that processor 1 reads data A with a value of 5 from main memory into its local cache. Similarly, processor 2 reads data ! into lits local cache as well. Process 1 then updates A to 10. However, since A resides in processor 1's local cache, the update only occurs there, in processor 1's local cache, and not in the local cache for processor 2.
+
+## 1.21
+### Discuss, with examples, how the problem of maintaining coherence of cached data manifests itself in the following processing environments:
+1. Single-processor systems
+2. Multiprocessor systems
+3. Distributed systems
+
+1. In a single-processor system, separate local caches must synchronize with eachother by synchronizing themselves with a shared cache
