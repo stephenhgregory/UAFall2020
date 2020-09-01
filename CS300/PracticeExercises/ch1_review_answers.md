@@ -18,7 +18,7 @@
 The **kernel**.
 
 ### 1.4: What do mobile operating systems often include in addition to the core kernel?
-System programs, which are programs that are installed on the system when the OS is shipped to the user. For instance, a Phone app for making phone calls, a messaging app for sending SMS and MMS messages, an email app, etc.
+Middleware - a set of frameworks that provide additional services to application developers
 
 ## Section 1.2
 

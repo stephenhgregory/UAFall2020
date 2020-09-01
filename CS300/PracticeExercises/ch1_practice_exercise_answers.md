@@ -51,13 +51,13 @@ There are difficulties associated with the practice adopted by early computers o
 Some CPUs have more than 2 modes of operation. This could be used in a multitude of ways. For example, level 0 may be "kernel", which is the level at which any instructions available to the computer can be run, and level 1 and level 2 may be "stock application", which is the level afforded to applications shipped with the operating system. Then perhaps level 3 could be "user", which may be the level afforded to all 3rd party applications.
 
 ## 1.9
-A program could use timers to compute the current time by setting a timer for some tim ein the future, and then goingg to sleep. When awakened by the interrupt, it could update its local state, which its using to keep track of the number of interrupts its received so far, and then go to sleep again. It could simply repeat this process of continually setting timer interrupts and updating its local state when the interrupts are actually raised.
+A program could use timers to compute the current time by setting a timer for some time in the future, and then going to sleep. When awakened by the interrupt, the program could update its local state, which it is using to keep track of the number of interrupts its received so far, and then go to sleep again. It could simply repeat this process of continually setting timer interrupts and updating its local state when the interrupts are actually raised.
 
 ## 1.10
 ### 2 reasons why caches are useful
 1. Caches provide the CPU with a faster method of retrieving data
 2. Caches reduce unnecessarily accessing the same memory over and over again
-Caches introduce issues associated with having data in even more places. For example, a variable x may be in cache, in a register, and memory, AND in long-term storage. This simply leads to increased complexity associated with making sure that all instances of the variable are equivalent. 
+Caches introduce issues associated with having data in even more places. For example, a variable x may be in cache, in a register, in memory, AND in long-term storage. This simply leads to increased complexity associated with making sure that all instances of the variable are equivalent. 
 Unfortunately, caches cannot be as large as permanent storage for several reasons. Firstly, cache memory is far more expensive per-bit than something like a hard disk drive, due to the nature of its physical structure and the subsequent production requirements. Secondly, cache memory must be physically very close to the SPU's processing core. If a cache as big as a 1TB HDD were in a computer case, it would be a minimum of a few inches away from the CPU core, which is significantly larger than the distance between current caches and processing cores. Finally, cache memory is volatile, meaning that data is only held onto while the device is on and receiving power. Everytime the computer is turned off, the cache is reset. Therefore, nothing could be stored on the computer permanently!
 
 ## 1.11
