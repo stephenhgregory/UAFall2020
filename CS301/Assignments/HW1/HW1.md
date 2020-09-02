@@ -41,5 +41,5 @@ Program-data independence means that the information describing the structure of
     - The Ship_Movement has a timestamp, longitude and latitude. The timestamp is composed of a date and time. The timestamp is unique for a particular ship, not across all ships. A ship can have zero to many Ship_movements, but a Ship_movement is associated with one and only one ship.
 
 ## 6. The EER and UML model are not available in ERD Plus so you can use any drawing tool you would like to redraw the Owner and Mechanic entities as a specialization of a “Person” entity for the following.   Include the Ship entity and any relationships with the new subclasses.
-- The EER model
-- The UML model
+- EER model
+- UML model
