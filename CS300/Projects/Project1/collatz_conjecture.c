@@ -54,7 +54,7 @@ void parentProcess(int* status)
 
 int main(int argc, char **argv)
 {
-    pid_t forkStatus;
+    pid_t forkResult;
     int status;
     int startNumber;
 
@@ -69,16 +69,16 @@ int main(int argc, char **argv)
     startNumber = atoi(argv[1]);
 
     // Create the child process
-    forkStatus = fork();
+    forkResult = fork();
 
     // Child process
-    if (forkStatus == 0)
+    if (forkResult == 0)
     {
         childProcess(&startNumber);
     }
 
     // Parent Process
-    else if (forkStatus > 0)
+    else if (forkResult > 0)
     {
         parentProcess(&status);
     }
