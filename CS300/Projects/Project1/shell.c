@@ -8,41 +8,65 @@
 #define MAX_LINE 80 // The maximum length for a command
 #define COMMAND_HISTORY_LEN 10 // The length of the command history
 
+void resetVars(int *ampersandSeen, int *noCommandRun);
+void showCommandHistory(char rawArgsHistory[COMMAND_HISTORY_LEN][MAX_LINE], char *rawArgs, int index, int *noCommandRun);
+void executePreviousCommand(char rawArgsHistory[COMMAND_HISTORY_LEN][MAX_LINE], char *rawArgs, char **args, int index, int *ampersandSeen, int *noCommandRun);
+void executeNthCommand(char rawArgsHistory[COMMAND_HISTORY_LEN][MAX_LINE], char **args, char *rawArgs, int index, int *ampersandSeen, int *noCommandRun);
+void removeChar(char *str, char garbage);
+void copyRawArgs(char *rawArgsCopy, char *rawArgs);
+void tokenizeArgs(char rawArgsHistory[COMMAND_HISTORY_LEN][MAX_LINE], char **args, char *rawArgs, int index, int *ampersandSeen, int *noCommandRun);
+
 void resetVars(int *ampersandSeen, int *noCommandRun)
 {
     *ampersandSeen = 0;
     *noCommandRun = 0;
 }
 
-void executeLastCommand(char rawArgsHistory[COMMAND_HISTORY_LEN][MAX_LINE], char *args[], int index)
-{
-    if (index - 1 <= 0 )
-    {
-        // TODO: Handle error
-        return;
-    }
-
-    tokenizeArgs(rawArgsHistory, args, char *rawArgs, index, ampersandSeen, noCommandRun) 
-
-
-}
-
-void showCommandHistory(char rawArgsHistory[COMMAND_HISTORY_LEN][MAX_LINE], int index)
+void showCommandHistory(char rawArgsHistory[COMMAND_HISTORY_LEN][MAX_LINE], char *rawArgs, int index, int *noCommandRun)
 {
     for (int i = index - 1; i > (index - COMMAND_HISTORY_LEN - 1) && i > 0; i--)
     {
         if (rawArgsHistory[i] != NULL)
             printf("%d %s\n", i, rawArgsHistory[i%10]);
     }
+    *noCommandRun = 1;
 }
 
-void executeNthCommand(char rawArgsHistory[COMMAND_HISTORY_LEN][MAX_LINE], char *args[], int N, int index)
+void executePreviousCommand(char rawArgsHistory[COMMAND_HISTORY_LEN][MAX_LINE], char *rawArgs, char **args, int index, int *ampersandSeen, int *noCommandRun)
 {
+    if (index - 1 <= 0) // Handle special case where there are no previous commands
+    {
+        printf("No previous commands.\n");
+        *noCommandRun = 1;
+        return;
+    }
+        
+    copyRawArgs(rawArgs, rawArgsHistory[(index-1)%COMMAND_HISTORY_LEN]); // Copy the previous rawArgs into rawArgsCopy
 
+    // Recursively call tokenizeArgs with the previous command from rawArgsHistory
+    tokenizeArgs(rawArgsHistory, args, rawArgs, index, ampersandSeen, noCommandRun);
 }
 
-void removeChar(char *str, char garbage) {
+void executeNthCommand(char rawArgsHistory[COMMAND_HISTORY_LEN][MAX_LINE], char **args, char *rawArgs, int index, int *ampersandSeen, int *noCommandRun)
+{
+    removeChar(args[0], '!'); // Remove the '!' from the command
+    u_int32_t N = atoi(args[0]); // Get the command # to execute
 
+    if (index - N > COMMAND_HISTORY_LEN || N >= index || N <= 0)
+    {
+        printf("No memory of command #%d.\n", N);
+        *noCommandRun = 1;
+        return;
+    }
+
+    copyRawArgs(rawArgs, rawArgsHistory[N%COMMAND_HISTORY_LEN]); // Copy the Nth rawArgs into nthRawArgs
+
+    // Recursively call tokenizeArgs with the Nth command from rawArgsHistory
+    tokenizeArgs(rawArgsHistory, args, rawArgs, index, ampersandSeen, noCommandRun);
+}
+
+void removeChar(char *str, char garbage)
+{
     char *src, *dst;
     for (src = dst = str; *src != '\0'; src++) {
         *dst = *src;
@@ -59,7 +83,7 @@ void copyRawArgs(char *rawArgsCopy, char *rawArgs)
         rawArgsCopy[--len] = '\0';
 }
 
-void tokenizeArgs(char rawArgsHistory[COMMAND_HISTORY_LEN][MAX_LINE], char *args[], char *rawArgs, int index, int *ampersandSeen, int *noCommandRun)
+void tokenizeArgs(char rawArgsHistory[COMMAND_HISTORY_LEN][MAX_LINE], char **args, char *rawArgs, int index, int *ampersandSeen, int *noCommandRun)
 {
     int i = 0; // Counter
     char rawArgsCopy[MAX_LINE]; // Copy of the raw argument string
@@ -68,7 +92,7 @@ void tokenizeArgs(char rawArgsHistory[COMMAND_HISTORY_LEN][MAX_LINE], char *args
 
     args[i] = strtok(rawArgs, " \n"); // Get the first token
 
-    if (args[i] == NULL) // Handles special case where command is NULL (no command)
+    if (args[i] == NULL) // Handle special case where command is NULL (no command)
     {
         *noCommandRun = 1;
         return;
@@ -76,27 +100,19 @@ void tokenizeArgs(char rawArgsHistory[COMMAND_HISTORY_LEN][MAX_LINE], char *args
 
     else if (strcmp(args[i], "history") == 0) // Handle special case of "history" command
     {
-        if (index - 1 <= 0)
-        {
-            // TODO: Handle error
-        }
-        // Recursively call tokenizeArgs with the previous command from rawArgsHistory
-        tokenizeArgs(rawArgsHistory, args, rawArgsHistory[(index-1)%COMMAND_HISTORY_LEN], index, ampersandSeen, noCommandRun);
+        showCommandHistory(rawArgsHistory, rawArgs, index, noCommandRun); // List the command history
+        return;
     }
 
     else if (strcmp(args[i], "!!") == 0) // Handle special case of "!!" command
     {
-        showCommandHistory(rawArgsHistory, index); // List the command history
-        *noCommandRun = 1;
+        executePreviousCommand(rawArgsHistory, rawArgs, args, index, ampersandSeen, noCommandRun);
         return;
     }
     
     else if (args[i][0] == '!') // Handle special case of "!N" command
     {
-        removeChar(args[i], '!'); // Remove the '!' from the command
-        int N = atoi(args[i]); // Get the command # to execute
-        executeNthCommand(rawArgsHistory, args, N, index); // Execute the Nth command
-        *noCommandRun = 1;
+        executeNthCommand(rawArgsHistory, args, rawArgs, index, ampersandSeen, noCommandRun);
         return;
     }
 
@@ -111,10 +127,7 @@ void tokenizeArgs(char rawArgsHistory[COMMAND_HISTORY_LEN][MAX_LINE], char *args
         args[i] = strtok(NULL, " \n"); // Get the next token from Args
     }
     
-    printf("Copying %s to rawArgsHistory[%d]\n", rawArgsCopy, index%COMMAND_HISTORY_LEN);
     strcpy(rawArgsHistory[index%COMMAND_HISTORY_LEN], rawArgsCopy); // Add this command to the rawArgsHistory
-    printf("rawArgsHistory[%d]: %s\n", index%COMMAND_HISTORY_LEN, rawArgsHistory[index%COMMAND_HISTORY_LEN]);
-
 }
 
 int main(void)
@@ -146,17 +159,24 @@ int main(void)
 
         // Child process
         if (forkResult == 0)
-            execvp(args[0], args);
+        {
+            if (execvp(args[0], args))
+            {
+                printf("Invalid Command.\n");
+                exit(1);
+            }
+            exit(0);
+        }
 
         // Parent process
         else if (forkResult > 0)
         {
             if (!ampersandSeen)
-            {
-                wait(&childStatus);
-            }
-        }
-
+                while(wait(&childStatus) != forkResult);
+            else
+                printf("[1]%d\n", forkResult);
+        } 
+            
         else
             perror("There was an error calling the fork() function.\n");
 
