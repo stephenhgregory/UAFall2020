@@ -41,7 +41,7 @@ void childProcess(int* startNumber)
 {
     printf("Currently inside of the childProcess function...\n");
     printCollatzSequence(startNumber);
-    printf("Child is exiting...\n");
+    printf("Child is exiting.\n");
 }
 
 void parentProcess(int* status)
@@ -49,7 +49,7 @@ void parentProcess(int* status)
     printf("Parent is waiting...\n");
     wait(status);
     printf("Status returned from child: %d\n", *status);
-    printf("Parent is exiting...\n");
+    printf("Parent is exiting.\n");
 }
 
 int main(int argc, char **argv)
