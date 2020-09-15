@@ -1,3 +1,8 @@
+/**
+ * Author: Stephen Gregory
+ * CWID: 11812663
+*/
+
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
