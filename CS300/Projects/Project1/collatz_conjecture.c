@@ -27,7 +27,7 @@ void printCollatzSequence(int *n)
     printf("%d\n", *n);
 }
 
-void printCommandLineArguments(int* argc, char** argv) 
+void printCommandLineArguments(int *argc, char **argv) 
 {
     int i;
     if (*argc <= 1)
