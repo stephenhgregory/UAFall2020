@@ -179,10 +179,9 @@ int main(void)
         {
             if (!ampersandSeen)
                 while(wait(&childStatus) != forkResult);
-            else
-                printf("[1]%d\n", forkResult);
         } 
             
+        // Error while forking
         else
             perror("There was an error calling the fork() function.\n");
 
