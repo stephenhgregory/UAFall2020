@@ -24,13 +24,14 @@ void printCollatzSequence(int *n)
 
 void printCommandLineArguments(int* argc, char** argv) 
 {
+    int i;
     if (*argc <= 1)
     {
         return;
     }
 
     printf("You have entered %d arguments:\n", *argc-1);
-    for (int i = 1; i < *argc-1; i++)
+    for (i = 1; i < *argc-1; i++)
     {
         printf("%s, ", argv[i]);
     }
@@ -87,5 +88,5 @@ int main(int argc, char **argv)
     {
         perror("There was an error calling the fork() function.\n");
     }
-
+    return 0;
 }

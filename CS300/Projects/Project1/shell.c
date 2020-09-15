@@ -24,7 +24,8 @@ void resetVars(int *ampersandSeen, int *noCommandRun)
 
 void showCommandHistory(char rawArgsHistory[COMMAND_HISTORY_LEN][MAX_LINE], char *rawArgs, int index, int *noCommandRun)
 {
-    for (int i = index - 1; i > (index - COMMAND_HISTORY_LEN - 1) && i > 0; i--)
+    int i;    
+    for (i = index - 1; i > (index - COMMAND_HISTORY_LEN - 1) && i > 0; i--)
     {
         if (rawArgsHistory[i] != NULL)
             printf("%d %s\n", i, rawArgsHistory[i%10]);
