@@ -13,15 +13,15 @@
 ### Using Amdahl’s Law, calculate the speedup gain of an application that  has a 60 percent parallel component for (a) two processing cores and (b) four processing cores.
 Recall Amdahl's equation:
 ```
-speedup <= 1 / (1 + ((1-S)/N))
+speedup <= 1 / (S + ((1-S)/N))
 ``` 
 1. (a) If there is a 60% parallel component, then 40%, or .4 (S), of the application must run serially. Additionally, there are 2 processing cores (N). Substituting these values for S and N into the following Amdahl's equation, we will get:
 ```
-speedup <= 1 / (1 + ((1-0.4)/2)) ≈ 0.769
+speedup <= 1 / (0.4 + ((1-0.4)/2)) ≈ 1.429
 ``` 
 2. (a) If there is a 60% parallel component, then 40%, or .4 (S), of the application must run serially. Additionally, there are 4 processing cores (N). Substituting these values for S and N into the following Amdahl's equation, we will get:
 ```
-speedup <= 1 / (1 + ((1-0.4)/4)) ≈ 0.870
+speedup <= 1 / (0.4 + ((1-0.4)/4)) ≈ 1.818
 ``` 
 
 ## 4.3
@@ -44,3 +44,78 @@ Typically, when a process is created, memory is allocated for the stack space, h
 ### Assume that an operating system maps user-level threads to the kernel using the one-to-many model and that the mapping is done through LWPs. Furthermore, the system allows developers to create real-time threads for use in real-time systems. Is it necessary to bind a real-time thread to an LWP? Explain.
 First, recall that LWPs, or lightweight processes, act as a sort of virtual processor onto which the application can schedule a user thread to run. Each LWP is attached to kernel thread, and it is those kernel threads that the operating system schedules to run on physical CPU cores.
 Yes, it should be necessary for the system to bind a real-time thread to an LMP! Because a real-time thread must be run as quickly as possible, we can't put ourselves in a position where a real-time thread needs to wait on other real-time threads to execute before it can execute. This is why the one-to-many model will not work in this instance. If multiple threads are mapped to a single LWP, then the LWP can only execute one of the threads at a time, seeing as how each LWP is attached to exaactly one kernel thread. This is where a two-level model for our system would make sense. Here, all of the user-level threads could be mapped to one LWP in a one-to-many fashion, and all of the real-time threads attach to their own LWP, each of which is attached to its own kernel. That way, each real-time thread is given immediate priority, and doesn't need to wait for other threads to finish.
+
+## 4.8
+### Provide two programming examples in which multithreading does *not* provide better performance than a single-threaded solution
+Any kind of program which must run sequentially is a good candidate to avoid multithreading. An example of this might be a program that calculates tax returns. This must obviously be done sequentially. Another example is a shell program such as the C-shell (csh) or Bourne-again shell (bash). These programs run quite sequentially, and must closely monitor its own working spaces, watching things like open files, environment variables, the current working directory, etc. 
+
+## 4.9
+### Under what circumstances does a multithreaded solution using multiple kernel threads provide better performance than a single-threaded solution on a single-processor system? 
+Any situations in which the work that process needs to do can be separated into independent tasks is a good time for multithreading with multiple kernel threads. With multiple kernel threads, multiple things can be run at once, on different processing cores, if their execution does not rely on the results of other threads. Otherwise, the operating system truly could not do multiple things at once. Such a system could certainly emulate doing multiple things at once by rapidly context switching at regular time intervals, but this context switching alone would incur lots of overhead, in addition to the fact that nothing would be running concurrently.
+
+## 4.10
+### Which of the following components of program state are shared across threads in a multithreaded process?
+### - Register Values
+### - Heap memory
+### - Global variables
+### - Stack memory
+In a multithreaded process, Global variables and heap memory are shared across threads while stack memory and register values are unique/private to each thread.
+
+## 4.11
+### Can a multithreaded solution using multiple user-level threads achieve better performance on a multiprocessor system than on a  single-processor system? Explain.
+The answer is no, and yes. A multithreaded solution with multiple user-level threads **can** achieve better performance on a multiprocessor system than on a single-processor system. **If we assume that we have atleast a one-to-one or many-to-many architecture, wherein each user thread may be mapped to its own kernel thread, or, at the very least, we have access to multiple kernel threads, then we can certainly gain better performance with multiple processing cores**. With a single core, the system could only run one kernel thread at a time. This means we would have **no parallelism with a single core**. We would achieve concurrency, but no parallelism. **However**, if we have mutliple cores, then multiple kernel threads can/will run in parallel (at the same time). Therefore, if our threads could truly run completely independent of each other, and didn't wait for the execution or results of any other thread, then a dual-core system could theoretically, in a perfect universe, run twice as fast as a single-core system.
+
+## 4.12
+### In Chapter 3, we discussed Google’s Chrome browser and its practice of opening each new tab in a separate process. Would the same benefits have been achieved if, instead, Chrome had been designed to open each new tab in a separate thread? Explain. 
+No, because one of the primary reasons that a new process was craeted for each browser tab was so that if a single webpage crashed, it would not crash the entire browser. If you used a thread for each tab, then the browser and all of its tabs will be inside of a single process, and if a tab were to crash, the entire application would crash along with it. However, Google Chrome is known to be a memory hog, so if there were a way to mitigate this issue without the creation of separate processes for each tab, then spawning new tabs instead of new processes could help the application use less memory.
+
+## 4.13
+### Is it possible to have concurrency but not parallelism? Explain.
+Yes! Concurrency means that we can run multiple threads or tasks together in the same overlapped time perioud, but it does not mean that we are running them at the same instance in time. If I start two tasks at the same time, and I intermittently switch between the two tasks in order to finish them more efficiently, then I have achieved concurrency. Parallelism, on the other hand, means that I can run multiple tasks at the same instance in time. Therefore, if I have parallelism, then I must also have concurrency, but I can have concurrency without parallelism.
+
+## 4.14
+### Using Amdahl's Law, calculate the speedup gain for the following applications:
+### 1. 40 percent parallel with (a) 8 processing cores and (b) 16 processing cores
+### 2. 67 percent parallel with (a) 2 processing cores and (b) 4 processing cores
+### 3. 90 percent parallel with (a) 4 processing cores and (b) 8 processing cores
+Recall Amdahl's Equation:
+```
+speedup <= 1 / (S + ((1-S)/N))
+```
+1. 
+    - (a) 
+    ``` 
+    speedup <= 1 / (.6 + ((1-.6)/8)) ≈ 1.538
+    ``` 
+    - (b) 
+    ``` 
+    speedup <= 1 / (.6 + ((1-.6)/16)) = 1.6
+    ``` 
+2. 
+    - (a) 
+    ``` 
+    speedup <= 1 / (.33 + ((1-.33)/2)) ≈ 1.504
+    ``` 
+    - (b) 
+    ``` 
+    speedup <= 1 / (.33 + ((1-.33)/4)) = 2.010
+    ``` 
+3. 
+    - (a) 
+    ``` 
+    speedup <= 1 / (.1 + ((1-.1)/4)) ≈ 3.077
+    ``` 
+    - (b) 
+    ``` 
+    speedup <= 1 / (.1 + ((1-.1)/8)) = 4.706
+    ``` 
+
+## 4.15
+### Determine if the following problems exhibit task or data parallelism
+### 1. Using a separate thread to generate a thumbnail for each photo in a collection
+### 2. Transposing a matrix in parallel
+### 3. A networked application where one thread reads from the ntwork kand another writes to the network
+### 4. The fork-join array summation application described in Section 4.5.2
+### 5. The Grand Central Dispatch System
+1. Data parallelism - We want to perform the same sort of task/computation on a large set of data, so our goal in making a parallel solution is to do this faster by simply splitting up the data and performing computation on different chunks of the data at the same time.
+2. Data parallelism - We have one task to do: transposing a matrix. This task can be made faster by simply transposing smaller cha=unks of the matrix (which is our data)
