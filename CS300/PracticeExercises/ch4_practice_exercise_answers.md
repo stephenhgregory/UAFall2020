@@ -114,8 +114,16 @@ speedup <= 1 / (S + ((1-S)/N))
 ### Determine if the following problems exhibit task or data parallelism
 ### 1. Using a separate thread to generate a thumbnail for each photo in a collection
 ### 2. Transposing a matrix in parallel
-### 3. A networked application where one thread reads from the ntwork kand another writes to the network
+### 3. A networked application where one thread reads from the network and another writes to the network
 ### 4. The fork-join array summation application described in Section 4.5.2
 ### 5. The Grand Central Dispatch System
 1. Data parallelism - We want to perform the same sort of task/computation on a large set of data, so our goal in making a parallel solution is to do this faster by simply splitting up the data and performing computation on different chunks of the data at the same time.
-2. Data parallelism - We have one task to do: transposing a matrix. This task can be made faster by simply transposing smaller cha=unks of the matrix (which is our data)
+2. Data parallelism - We have one task to do: transposing a matrix. This task can be made faster by simply transposing smaller chunks of the matrix (which is our data)
+3. Task parallelism - If one thread is reading from a network, and the other thread is writing to a network, then we can clearly delineate those two operations as separate tasks. 
+4. Data parallelism - The fork-join process is utilized so as to divide the computation into smaller subproblems. In this way, the data is split up into discrete portions and computations are done on those separate chunks of data in parallel.
+5. Task parallelism - Based upon the thread pool pattern, Grand Central Dispatch is utilized to manage all of the tasks in the entire operating system. In this way, GCD is an obcious example task parallelism, wherein multiple discrete tasks are performed in parallel.
+
+## 4.16
+### A system with 2 dual-core processors has 4 processors available for scheduling. A CPU-intensive application is running on this system. All input is performed at program start-up, when a single file must be opened. Similarly, all output is performed just before the program terminates, when the program results must be written to a single file. Between start-up and termination, the program is entirely CPU-bound. Your task is to improve the performance of this application by multithreading it. The application runs on a system that uses the one-to-one threading model (each user thread maps to a kernel thread).
+### 1. How many threads will you create to perform the input and output? Explain.
+### 2. How many threads will you create for the CPU-intensive portion of the application? Explain.
