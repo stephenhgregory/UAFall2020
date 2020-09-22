@@ -6,10 +6,10 @@ FROM
     employee, department
 WHERE 
     salary < 30000
-    OR
+OR
     (employee.dno = department.dnumber 
-        AND 
-        department.dname = 'Administration');
+AND 
+    department.dname = 'Administration');
         
 -- 1. b)
 SELECT
@@ -18,7 +18,7 @@ FROM
     employee JOIN department ON dno = dnumber
 WHERE 
     salary < 30000
-    OR
+OR
     department.dname = 'Administration';
     
 -- 1. c)
@@ -28,9 +28,8 @@ FROM
     employee
 WHERE 
     salary < 30000
-    OR
-    dno IN
-        (SELECT dnumber FROM department WHERE dname = 'Administration');
+OR
+    dno IN (SELECT dnumber FROM department WHERE dname = 'Administration');
         
 -- 1. d)
 SELECT
@@ -64,7 +63,7 @@ WHERE EXISTS (
         
 -- 1. f)
 SELECT
-    ssn , salary
+    ssn, salary
 FROM 
     (
     SELECT 
@@ -306,6 +305,6 @@ SELECT UNIQUE
     fname, lname, COUNT(*) OVER(PARTITION BY e.ssn) AS numProjects
 FROM 
     employee e INNER JOIN works_on w ON 
-        e.ssn = w.essn
+        e.ssn = w.essn;
 
 
