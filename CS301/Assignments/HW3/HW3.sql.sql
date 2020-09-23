@@ -299,7 +299,16 @@ FROM
 WHERE
     averageHours < (SELECT AVG(hours) FROM works_on);
     
+-- 9. c)
 
+SELECT
+    pname, AVG(hours) AS averageHours
+FROM
+    works_on RIGHT JOIN project ON works_on.pno = project.pnumber
+GROUP BY 
+    pname;
+
+    
 -- 10.
 SELECT UNIQUE
     fname, lname, COUNT(*) OVER(PARTITION BY e.ssn) AS numProjects

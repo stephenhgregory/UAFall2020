@@ -1,0 +1,15 @@
+Email: CrimsonAutonomous3@outlook.com
+Password: Indy2021!
+
+Windows with GPU VM Password: IndyMasterPas123$$
+
+General Notes:
+- What is .sce file? What is a "Scenario" file?
+
+After startup of Windows GPU VM:
+1. Go to labs.azure.com
+2. Startup Ansys simulator
+3. Open Visual Studio
+4. Open FrameworkIntegrationExample
+	- This is where all of the code is
+	- Steering1 is full left for steering, -1 is full right
