@@ -46,18 +46,18 @@ WHERE
 SELECT
     ssn, salary
 FROM 
-    employee
+    employee e
 WHERE EXISTS (
     SELECT 
         * 
     FROM 
-        department 
+        department d 
     WHERE 
-        department.dnumber = employee.dno
+        d.dnumber = e.dno
     AND ( 
             salary < 30000
             OR
-            department.dname = 'Administration'
+            d.dname = 'Administration'
         )
     );
         
@@ -67,7 +67,7 @@ SELECT
 FROM 
     (
     SELECT 
-        ssn, salary
+        *
     FROM 
         employee JOIN department ON employee.dno = department.dnumber
     WHERE
@@ -82,7 +82,7 @@ SELECT
     department.dnumber AS "Department #", 
     employee.lname AS "Manager",
     employee.address AS "Manager Address",
-    employee.bdate AS "Manager Birthdate"
+    employee.bdate AS "Manager Bdate"
 FROM 
     project
     INNER JOIN department ON project.dnum = department.dnumber
@@ -91,7 +91,7 @@ WHERE
     project.plocation = 'Stafford';
     
 -- 3. a)
-SELECT 
+SELECT DISTINCT
     dname, dlocation, plocation, pnumber
 FROM
     department 
@@ -104,7 +104,7 @@ WHERE
     
 
 -- 3. b)
-SELECT 
+SELECT DISTINCT
     dname, dlocation, plocation, pnumber
 FROM
     department 
@@ -150,29 +150,7 @@ WHERE essn IN (
     WHERE 
         hours > 30
     );
-
--- 4. b) Alternate (correlated subquery)
-SELECT UNIQUE
-    ssn AS "Social Security #"
-FROM 
-    employee e
-WHERE EXISTS (
-    SELECT 
-        essn
-    FROM 
-        works_on
-    WHERE 
-        e.ssn = essn AND hours < 10
-    )
-    AND EXISTS (
-    SELECT 
-        essn
-    FROM 
-        works_on
-    WHERE 
-       e.ssn = essn AND hours > 30
-    );    
-
+    
 -- 4. c)
 SELECT 
     essn AS "Social Security #"
@@ -196,7 +174,7 @@ FROM
 WHERE
     hours < 10 OR hours > 30;
 
--- 5. a) Shouldn't get: Franklin T Wong, Jennifer S Wallace, John Smith
+-- 5. a)
 SELECT UNIQUE
     ssn AS "SSN", CONCAT(CONCAT(fname, ' '), lname) AS "Name"
 FROM 
@@ -213,7 +191,7 @@ WHERE NOT EXISTS (
     SELECT essn
     FROM dependent WHERE ssn = essn AND relationship = 'Spouse' ); 
 
--- 5. b) Shouldn't get: Franklin T Wong, Jennifer S Wallace, John Smith
+-- 5. b) 
 SELECT UNIQUE
     ssn AS "SSN", CONCAT(CONCAT(fname, ' '), lname) AS "Name"
 FROM 
@@ -278,9 +256,13 @@ WHERE
     
 -- 9. b)
 SELECT
-    pname, AVG(hours) AS averageHours
+    pname, 
+CASE
+    WHEN AVG(hours) IS NULL THEN 0
+    ELSE AVG(hours)
+END AS averageHours
 FROM
-    works_on INNER JOIN project ON works_on.pno = project.pnumber
+    project p LEFT JOIN works_on w ON p.pnumber = w.pno
 GROUP BY 
     pname;
 
@@ -290,24 +272,18 @@ SELECT
 FROM 
     (
     SELECT
-        pname, AVG(hours) AS averageHours
+        pname, 
+    CASE
+        WHEN AVG(hours) IS NULL THEN 0
+        ELSE AVG(hours)
+    END AS averageHours
     FROM
-        works_on RIGHT JOIN project ON works_on.pno = project.pnumber
+        project p LEFT JOIN works_on w ON p.pnumber = w.pno
     GROUP BY 
         pname
     )
 WHERE
     averageHours < (SELECT AVG(hours) FROM works_on);
-    
--- 9. c)
-
-SELECT
-    pname, AVG(hours) AS averageHours
-FROM
-    works_on RIGHT JOIN project ON works_on.pno = project.pnumber
-GROUP BY 
-    pname;
-
     
 -- 10.
 SELECT UNIQUE
