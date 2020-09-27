@@ -16,7 +16,7 @@ The main difficulty in writing an OS for a real-time environment is that process
 	
 
 ## 1.4
-### First, an argument that an operating system should **not** include applications like browsers and mail programs:
+### First, an argument that an operating system should **not** include applications like browsers and mail programs: **Note: This is the argument that we agree upon in this class, and in formal study**
 An operating system should be designed from the ground up to provide a framework for users to interact with the computer's hardware, as well as a space for applications to live and be interacted with. In this definition of an OS, having applications like mail and web browsers are not part of an OS; rather, they are a part of applications which live on top of the OS. Put this way, are programs like a web browser and email client vital to the functionality of the computer? It could be argued that the answer to that question is no. Therefore, these should not be a part of an operating system, not because they are not immensely useful, but because they do not help the computer function or provide a framework for other applications to work and interact with eachother in any way.
 ### Second, an argument for the contrary: that an operating system **should** include a browser and email program:
 It is undoubtedly true that the primary function of an operating system is to provide a framework that makes it convenient, safe, secure, and simple to access a computer's resources, in addition to the other programs on the computer. However, in the landscape of modern use cases for computers, email clients and web browsers are absolutely necessary. It could be argued that an operating system shipped to a customer should contain all of the functionality needed for the user to use their computer at the most basic level. In 2020, accessing the internet and receiving emails are included in this definition: a computer is **incomplete** if it does not have the capability to do either of these things. Additionally, if the user is expected to download these programs themselves, how are they expected to find and download these programs if they can't access the internet through a web browser? By omitting a web browser specifically, the OS is forcing the user to do one of two things: (1) Purchase a web browser downloaded onto a CD/DVD/Flash Drive, or (2) Use the OS's proprietary "app-store" (if one is even available on the OS). Not to mention, if the user somehow accessed the internet via a different device, and sent an application download URL to their email, they would have no way of accessing that download URL because they wouldn't have an email client installed on their system!
@@ -31,7 +31,7 @@ The 'mode' bit which allows distinction between kernel and user modes adds a lay
     - This isn't a dangerous operation, so there's no need to protect it.
 3. Clear memory. **Should be privileged**
     - This is a dangerous operation that may be fatal, so it should be protected.
-4. Issue a trap instruction No need to be privileged
+4. Issue a trap instruction. No need to be privileged
     - Everyone is allowed to issue a trap instruction. In fact, traps are often the way that user programs make system calls.
 5. Turn off interrupts. **Should be privileged**
     - Interrupts are a vital part of the computer system, so turning them off could be catastrophic.
@@ -56,9 +56,9 @@ A program could use timers to compute the current time by setting a timer for so
 ## 1.10
 ### 2 reasons why caches are useful
 1. Caches provide the CPU with a faster method of retrieving data
-2. Caches reduce unnecessarily accessing the same memory over and over again
+2. Caches reduce unnecessarily accessing the same memory over and over again.
 Caches introduce issues associated with having data in even more places. For example, a variable x may be in cache, in a register, in memory, AND in long-term storage. This simply leads to increased complexity associated with making sure that all instances of the variable are equivalent. 
-Unfortunately, caches cannot be as large as permanent storage for several reasons. Firstly, cache memory is far more expensive per-bit than something like a hard disk drive, due to the nature of its physical structure and the subsequent production requirements. Secondly, cache memory must be physically very close to the SPU's processing core. If a cache as big as a 1TB HDD were in a computer case, it would be a minimum of a few inches away from the CPU core, which is significantly larger than the distance between current caches and processing cores. Finally, cache memory is volatile, meaning that data is only held onto while the device is on and receiving power. Everytime the computer is turned off, the cache is reset. Therefore, nothing could be stored on the computer permanently!
+Unfortunately, caches cannot be as large as permanent storage for several reasons. Firstly, cache memory is far more expensive per-bit than something like a hard disk drive, due to the nature of its physical structure and the subsequent production requirements. Secondly, cache memory must be physically very close to the CPU's processing core. If a cache as big as a 1TB HDD were in a computer case, it would be a minimum of a few inches away from the CPU core, which is significantly larger than the distance between current caches and processing cores. Finally, cache memory is volatile, meaning that data is only held onto while the device is on and receiving power. Everytime the computer is turned off, the cache is reset. Therefore, nothing could be stored on the computer permanently!
 
 ## 1.11
 ### Client-Server vs peer-to-peer models of distributed systems
@@ -82,7 +82,7 @@ We can use two types of clustering:
         - Inefficiency - The machine that is not the active server is simply sitting there, wasting computing resources
         - Speed - This cluster is no faster than a single machine
 2. Symmetric clustering
-    - Both machines are running at the system, and are monitoring eachother. In our case, one machine could be running half of the tables and all of the stored procedures, triggers, etc related to that half of the database, and the other machine could be running the other half of the tables and the rest of the stored procedures, triggers, etc. However, chances are, the two 'halves' of the database would need to talk to eachother, so each server would frequently need to communicate with the other.
+    - Both machines are running at the same time, and are monitoring each other. In our case, one machine could be running half of the tables and all of the stored procedures, triggers, etc related to that half of the database, and the other machine could be running the other half of the tables and the rest of the stored procedures, triggers, etc. However, chances are, the two 'halves' of the database would need to talk to eachother, so each server would frequently need to communicate with the other.
     - **Benefits:**
         - Efficiency - Both machines are being utilized at all times, so there is no waste of compute time or resources
         - Speed - The cluster can deliver faster performance, in this case faster queries, because there are multiple machines available to service clients
@@ -92,7 +92,7 @@ We can use two types of clustering:
 
 ## 1.14
 ### What's the purpose of interrupts? How does an interrupt differ from a trap? Can traps be generated intentionally by a user program? If so, for what purpose?
-Interrupts are hardware-generated change-og-flows used to send signals to the CPU that a service is needed urgently. They literally "interrupt" the CPU so that it will drop what it's doing and summon an interrupt handler to deal with the cause of the interrupt (solve that problem). A trap is simply a software-generated interrupt. 
+Interrupts are hardware-generated change-of-flows used to send signals to the CPU that a service is needed urgently. They literally "interrupt" the CPU so that it will drop what it's doing and summon an interrupt handler to deal with the cause of the interrupt (solve that problem). A trap is simply a software-generated interrupt. 
 
 ## 1.15
 ### Explain how the Linux kernel variables HZ and jiffies can be used to determine the number of seconds the system has been running since it was booted
@@ -102,7 +102,7 @@ jiffies / HZ = seconds
 ```
 
 ## 1.16
-### Director Memory Access (DMA) is used for high-speed IO devices in order to avoid increasing the CPU's execution load. 
+### Direct Memory Access (DMA) is used for high-speed IO devices in order to avoid increasing the CPU's execution load. 
 1. How does the CPU interface with the device to coordinate the transfer?
   - To initiate a DMA transfer, the CPU first sets up the DMA registers, which contain a pointer to the source of a transfer, a pointer to the destination of a transfer, and a counter of the number of bytes to be transferred. Then, the DMA controller proceeds to place addresses on the bus to perform transfers, while the CPU is free to do other work.
 2. How does the CPU know when the memory operations are complete
@@ -116,11 +116,11 @@ First, we should define security. By secure, we mean that a user program is not 
 
 There are several approaches that could be taken. Firstly, one could write a simulator for a processor that does indeed have a kernel mode bit, and running the entire operating system on top of this emulator. However, this is slow. Another variant of this approach would be to run the operating system normally, but to run all user programs only in an emulator (This is the approach used in [Nachos](https://en.wikipedia.org/wiki/Not_Another_Completely_Heuristic_Operating_System)). 
 
-Another approach is to rely on safe languages. Only executing user programs written in a 'safe' language such as Java will work because the properties of the language guarantee the manual, arbitrary writes to memory are not allowed and there is a limited instruction set. Note here that the user doesn't get to choose arbitrary machine code to run - the code that is run is the result of just-in-time compilation of the Java source code. Similar to this approach is running only code which has been produced by a trusted compilter that is known to check memory addresses and not output priviliged instructions.
+Another approach is to rely on safe languages. Only executing user programs written in a 'safe' language such as Java will work because the properties of the language guarantee the manual, arbitrary writes to memory are not allowed and there is a limited instruction set. Note here that the user doesn't get to choose arbitrary machine code to run - the code that is run is the result of just-in-time compilation of the Java source code. Similar to this approach is running only code which has been produced by a trusted compiler that is known to check memory addresses and not output priviliged instructions.
 
 It is **not** enough to have the kernel scan the user code for bad instructions before executing it, if the code might have been produced by an arbitrary compiler. Firstly, bad instructions are hard to spot - for example, they might be a write instruction which happens to overwrite critical data, but which is not easily identifiable as doing such. Directly executing user code is also dangerous because the user code could be doing something indirect like overwriting itself or writing new code to a new page of memory and then jumping to that new page in memory, and that code would then not be checked for security.
 
-Similarly, asking the processor to check with the OS before executing each instruction doesn't quite work. Processor don't physically have a mode like this, and if if one did, that would basically be the same as having amode bit - there needs to be a way for the processor to know to check user code but not the OS itself. To make this work, you could use a full emulator, as described previously.
+Similarly, asking the processor to check with the OS before executing each instruction doesn't quite work. Processors don't physically have a mode like this, and if if one did, that would basically be the same as having a mode bit - there needs to be a way for the processor to know to check user code but not the OS itself. To make this work, you could use a full emulator, as described previously.
 
 ## 1.18
 ### Many SMP systems have different levels of caches; one level is local to each processing core, and another level is shared among all processing cores. Why are caching systems designed this way?
@@ -138,7 +138,7 @@ One of the main reasons for this design is speed. Local caches are much faster t
 
 ## 1.20
 ### Consider an SMP system. Illustrate with an example how data residing in memory could in fact have a different value in each of the local caches.
-We'll say that processor 1 reads data A with a value of 5 from main memory into its local cache. Similarly, processor 2 reads data ! into lits local cache as well. Process 1 then updates A to 10. However, since A resides in processor 1's local cache, the update only occurs there, in processor 1's local cache, and not in the local cache for processor 2.
+We'll say that processor 1 reads data A with a value of 5 from main memory into its local cache. Similarly, processor 2 reads A into its local cache as well. Process 1 then updates A to 10. However, since A resides in processor 1's local cache, the update only occurs there, in processor 1's local cache, and not in the local cache for processor 2.
 
 ## 1.21
 ### Discuss, with examples, how the problem of maintaining coherence of cached data manifests itself in the following processing environments:

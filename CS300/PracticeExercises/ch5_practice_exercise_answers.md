@@ -1,129 +1,94 @@
-# Chapter 4 Practice Exercise Answers
+# Chapter 5 Practice Exercise Answers
 
-## 4.1
-### Provide three programming examples in which multithreading provides better performance than a single-threaded solution
-1. Web Browser
-    - In a web browser, it makes a lot of sense for us to have multiple threads. Within one single tab, on one webpage, we may have separate threads for user input, HTTP requests, and webpage rendering. That way, we can be posting an HTTP POST request to a server while a video is still playing on the screen. Ruthermore, we could also type in a search bar while the return code for the HTTP POST request is still not received, and the video is still playing. Without multithreading, the the video would have to stop playing while our HTTP POST request is being sent and waited on, and clicking and typing on the search bar wouldn't work. The whole thing would appear to "freeze".
-2. Divide and Conquer algorithms
-    - In a divide-and-conquer algorithm such as merge-sort, each recursively created subproblem can be created as a separate thread. This is a perfect use-case for multithreading, because each subproblem does not need to wait for the other subproblems to compute. In this case, each thread can run concurrently, as each is an independent unit of work. Potentially, the end of the recursive task-creation could be triggered at a small constant size N. In this way, once subproblems reached a size less than or equal to N, the problem could be solved in one thread without further splitting into smaller threads. This may provide some optimization, as each smallest unit-of-work thread is a much smaller problem than the entire problem, meaning that a task scheduler could have an easier time "fitting in" the threads in the small time interval that they have.
-3. Desktop GUI for OS
-    - In the desktop GUI for an OS, it could be important that threads may be created and run concurrently. Obviously, I/O, file manipulation, updates/downloads, and windowing should all be separate *processes*, that much is clear to see. Why, however, would we need a multithreading solution here? The main benefits of multithreading: (1) responsiveness, (2) resource sharing, (3) economy, and (4) scalability, show why this is a good use case for multithreading. In the aforementioned file manipulation scenario, we could benefit from having a single process to handle all file manipulation, which is further split into threads. This way, if we need to access 5 separate folders for a number of running applications, each application can talk directly to the file manipulation process, and that file manipulation process may create 5 separate threads to execute the body-of-work for each inquiring application. This makes sense, because permissions, stack space, code, etc. doesn't need to be copied into separate processes, which would create redundancy and incur overhead.
+## 5.1 
+### A CPU-scheduling algorithm determines an order for the execution of its scheduled processes. Given n processes to be scheduled on one processor, how many different schedules are possible? Give a formula in terms of n. 
+- This question can be generalized to a more common problem: how many different orderings of n items in a set are possible? This is a permutation! A permutation ```P(n, r)``` tells us how many orderings of ```n``` items in a set are possible, when taken ```r``` at a time. Here, the number of items that we "take at a time" is same as the length of the set itself. In other words, we're trying to order the entire set of processes. the formula for permutations is as follows: 
+  - ```P(n, r) = (n!)/(n - r)!```
+- Because ```n == r``` in our case, the solution to this problem is simply the factorial of n, ```n!```.
 
-## 4.2
-### Using Amdahl’s Law, calculate the speedup gain of an application that  has a 60 percent parallel component for (a) two processing cores and (b) four processing cores.
-Recall Amdahl's equation:
-```
-speedup <= 1 / (S + ((1-S)/N))
-``` 
-1. (a) If there is a 60% parallel component, then 40%, or .4 (S), of the application must run serially. Additionally, there are 2 processing cores (N). Substituting these values for S and N into the following Amdahl's equation, we will get:
-```
-speedup <= 1 / (0.4 + ((1-0.4)/2)) ≈ 1.429
-``` 
-2. (a) If there is a 60% parallel component, then 40%, or .4 (S), of the application must run serially. Additionally, there are 4 processing cores (N). Substituting these values for S and N into the following Amdahl's equation, we will get:
-```
-speedup <= 1 / (0.4 + ((1-0.4)/4)) ≈ 1.818
-``` 
+## 5.2
+### Explain the difference between preemptive and non-preemptive scheduling
+- Preemptive scheduling means that the CPU is going to *preempt* processes when it decides to. This means that if the CPU has given a process a certain time to execute, and it wants another process to execute, the CPU will *preempt* the running process, stopping that process in its tracks, and handing control to the other process that it wants to run. In other words, preemptive scheduling means that the processor is allowed to stop processes whenever it wants, it doesn't have to wait on the processes to give up control. Conversely, non-preemptive scheduling means that the CPU will **not** *preempt* running processes. This means that the CPU will not stop a process from running to hand control to another process. The CPU will be patient, and will wait until processes finish execution and willingly give up control themselves back to the CPU. 
 
-## 4.3
-### Does the multithreaded web server in Section 4.1 exhibit task or data parallelism?
-That example exhibits primarily task parallelism. Our goal is not to perform operations on the same data, or to separate the data into separate chunks that can be processed concurrently, as would be the case in a data parallelism scenario. Rather, with a web server, we have multiple units of work (*tasks*) which need to be run, and can be separated out into separate chunks of work. For example, displaying a picture on a website can benefit from task parallelism because it is a completely separate task which we sould like to run concurrently with another task or set of tasks like taking keyboard input, management of the UI of the browser, and other tasks.
+## 5.3
+### Suppose that the following processes arrive for execution at the times indicated. Each process will run for the amount of time listed. In answering the questions, use nonpreemptive scheduling, and base all decisions on the information you have at the time the decision must be made. 
+| **Process** | **Arrival Time** | **Burst Time** |
+|-------------|------------------|----------------|
+| P1          | 0.0              | 8              |
+| P2          | 0.4              | 4              |
+| P3          | 1.0              | 1              |
+### 1. What is the average turnaround time for those processes with the FCFS scheduling algorithm?
+1. Recall that turnaround time is the difference between finish time and arrival time.
+2. P1 => 8 - 0
+3. P2 => 12 - 0.4
+4. P3 => 13 - 1
+5. P1 + P2 + P3 / 3 = (8 + 11.6 + 12) / 3 = 31.6 / 3 ≈ **10.533**
+### 2. What is the average turnaround time for those processes with the SJF scheduling algorithm?
+1. P1 => 8 - 0
+2. P3 => 9 - 1
+3. P2 => 13 - 0.4
+4. P1 + P2 + P3 / 3 = (8 + 8 + 12.6) / 3 = 28.6 / 3 ≈ **9.533**
+### 3. The SJF algorithm is supposed to improve performance, but notice that we chose to run process P1 at time 0 because we did not know that two shorter processes would arrive soon. Compute what the average turnaround time will be if the CPU is left idle for the first 1 unit and then SJF scheduling is used. Remember that processes P1 and P2 are waiting during this idle time, so their waiting time may increase. This algorithm could be known as future-knowledge scheduling. 
+1. Notice we are actually beginning to schedule our processes at time 1
+2. P3 => 2 - 1
+3. P2 => 6 - 0.4
+4. P1 => 14 - 0
+5. P1 + P2 + P3 / 3 = (1 + 5.6 + 14) / 3 = 20.6 / 3 ≈ **6.5867**
 
-## 4.4
-### What are two differences between user-level threads and kernel-level threads? Under which circumstances is one type better than the other?
-User level threads are implemented by the users, and kernel threads are implemented by the operating system. Also, the implementation of user-level threads is typically much simpler than that of kernel threads. Hence, kernel threads are slower to create. User level threads are simpler because they are a sort of abstraction away from the hardware. It is important to note that the actual CPU cores do not execute user-level threads. Instead, user-level threads must be mapped onto "real" kernel threads in order to actually execute. If an applicatino programmer is developing a new Windows application that is a messaging service, they should like to create a UI thread, perhaps a server updating thread, and a business logic thread. These make sense as user-level threads, but the operating system may prefer to organize the threads in a separate way, say by perhaps implementing the business logic and server interfacing thread through a single kernel thread, while granting the user-level UI thread its own kernel thread. In this way, the UI and business logic OR server interface could run not only concurrently, but concurrently AND parallel. However, thee business logic and server interface could run concurrently, but NOT in parallel (at the same time).
+## 5.4
+### Consider the following set of processes, with the length of the CPU burst time given in milliseconds
+| **Process** | **Burst Time** | **Priority** |
+|-------------|----------------|--------------|
+| P1          | 2              | 2            |
+| P2          | 1              | 1            |
+| P3          | 8              | 4            |
+| P4          | 4              | 2            |
+| P5          | 5              | 3            |
+### 1. Draw four Gantt charts that illustrate the execution of these processes using the following scheduling algorithms: FCFS, SJF, nonpreemptive priority (a larger priority number implies a higher  priority), and RR (quantum = 2).
+- *See Notability*
+### 2. What is the turnaround time of each process for each of the scheduling algorithms in part a?
+- *See Notability*
+### 3. What is the waiting time of each process for each of these scheduling algorithms?
+- *See Notability*
+### 4. Which of the algorithms results in the minimum average waiting time (over all processes)?
+- SJF at 4.6 units of time
 
-## 4.5
-### Describe the actions taken by a kernel to context-switch between kernel-level threads
-Context switching between kernel threads typically requires saving the value of the registers of the thread being switched out and restoring the values of the registers of the new thread.
+## 5.5
+### *See Notability*
 
-## 4.6
-### What resources are used when a thread is created? How do they differ from those used when a process is created?
-Typically, when a process is created, memory is allocated for the stack space, heap space, data, text, and more. In essence, if a ```fork()``` call is made, everything in the parent process is **copied** to create a new process. However, threads typically have access to all of the global data, heap space, and other shared data. Each thread gets its own stack space, but accesses shared heap memory.
+## 5.6
+### What advantage is there in having different time-quantum sizes at different levels of a multilevel queueing system?
+- Processes that may need a larger amount of interactivity and more frequent I/O bursts could benefit from having a shorter time quantum than much more CPU-bound processes, or processes that simply need raw computational time.
 
-## 4.7
-### Assume that an operating system maps user-level threads to the kernel using the one-to-many model and that the mapping is done through LWPs. Furthermore, the system allows developers to create real-time threads for use in real-time systems. Is it necessary to bind a real-time thread to an LWP? Explain.
-First, recall that LWPs, or lightweight processes, act as a sort of virtual processor onto which the application can schedule a user thread to run. Each LWP is attached to kernel thread, and it is those kernel threads that the operating system schedules to run on physical CPU cores.
-Yes, it should be necessary for the system to bind a real-time thread to an LMP! Because a real-time thread must be run as quickly as possible, we can't put ourselves in a position where a real-time thread needs to wait on other real-time threads to execute before it can execute. This is why the one-to-many model will not work in this instance. If multiple threads are mapped to a single LWP, then the LWP can only execute one of the threads at a time, seeing as how each LWP is attached to exaactly one kernel thread. This is where a two-level model for our system would make sense. Here, all of the user-level threads could be mapped to one LWP in a one-to-many fashion, and all of the real-time threads attach to their own LWP, each of which is attached to its own kernel. That way, each real-time thread is given immediate priority, and doesn't need to wait for other threads to finish.
+## 5.7
+### Many CPU-scheduling algorithms are parameterized. For example, the RR algorithm requires a parameter to indicate the time slice. Multilevel feedback queues require parameters to define the number of queues, the scheduling algorithms for each queue, the criteria used to move processes between queues, and so on. These algorithms are thus really sets of algorithms (for example, the set of RR algorithms for all time slices, and so on). One set of algorithms may include another (for example, the FCFS algorithm is the RR algorithm with an infinite time quantum). What (if any) relation holds between the following pairs of algorithm sets? 
+### 1. Priority and SJF
+- SJF could be defined as an algorithm wherein the CPU burst time is the representation of priority, where the lowest CPU burst time is the highest priority.
+### 2. Multilevel feedback queues and FCFS
+- In fact, the lowest-level queue in a MLFQ is a FCFS queue. This happens so that processes don't simply become starved.
+### 3. Priority and FCFS
+- In a FCFS, the time of arrival is essentially the priority, with the most recent arrivals having the highest priority. In this way, FCFS gives the highest priority to those jobs that have been in existence for the longest time.
+### 4. RR and SJF
+- Round Robin and Shortest Job First don't *really* have that much in common with eachother.
 
-## 4.8
-### Provide two programming examples in which multithreading does *not* provide better performance than a single-threaded solution
-Any kind of program which must run sequentially is a good candidate to avoid multithreading. An example of this might be a program that calculates tax returns. This must obviously be done sequentially. Another example is a shell program such as the C-shell (csh) or Bourne-again shell (bash). These programs run quite sequentially, and must closely monitor its own working spaces, watching things like open files, environment variables, the current working directory, etc. 
+## 5.8
+### Suppose that a CPU scheduling algorithm favors those processes that have used the least processor time in the recent past. Why will this algorithm favor I/O-bound programs and yet not permanently starve CPU-bound programs? 
+- The CPU will favor the I/O-bound processes because of their relatively short CPU bursts; however, the CPU-bound processes will not starve because the I/O-bound processes will frequently relinquish the CPU to do their I/O.
 
-## 4.9
-### Under what circumstances does a multithreaded solution using multiple kernel threads provide better performance than a single-threaded solution on a single-processor system? 
-Any situations in which the work that process needs to do can be separated into independent tasks is a good time for multithreading with multiple kernel threads. With multiple kernel threads, multiple things can be run at once, on different processing cores, if their execution does not rely on the results of other threads. Otherwise, the operating system truly could not do multiple things at once. Such a system could certainly emulate doing multiple things at once by rapidly context switching at regular time intervals, but this context switching alone would incur lots of overhead, in addition to the fact that nothing would be running concurrently.
+- NOTE: If this algorithm was implemented as a multilevel feedback queue, then a process which requires more processor time would certainly be moved to a lower priority queue, but in that queue, it would certainly be given a longer time quantum. In the absolutely worst case, that CPU-bound process might move to the bottom queue (priority-wise), where it would sit in a FCFS queue with no time quantum at all, and would be always be the first process to run in its queue until it either completes execution or is preempted by a process in a higher-priority queue.
 
-## 4.10
-### Which of the following components of program state are shared across threads in a multithreaded process?
-### - Register Values
-### - Heap memory
-### - Global variables
-### - Stack memory
-In a multithreaded process, Global variables and heap memory are shared across threads while stack memory and register values are unique/private to each thread.
+## 5.9
+### Distinguish between PCS and SCS scheduling 
+- PCS is implemented on many-to-many and one-to-many while SCS is implemented on one-to-one models
+- In PCS, scheduling is local so the threads competing belong to the same process
+- PCS is a priority based scheduler where priorities are set by a programmer
+- In PCS, threads are scheduled on available LWPs
+- SCS is used by the kernel to decide which kernel-level thread to schedule onto a CPU
+- In SCS, all of the threads on the system compete for the CPU
+- My answer: PCS stands for process-contention scope, while SCS stands for system-contention scope. PCS refers to the scheduling that occurs when threads belonging to the same process compete for CPU time. SCS refers to the scheduling that occurs between all of the threads in the system. Systems using the many-to-many model will use PCS to handle competition among user threads attached to a single LWP or kernel thread, and SCS to handle competition among separate LWPs. Systems using the one-to-one model, on the other hand, will typically only use SCS to handle the competition among separate threads, all of which are mapped directly to kernel threads.
 
-## 4.11
-### Can a multithreaded solution using multiple user-level threads achieve better performance on a multiprocessor system than on a  single-processor system? Explain.
-The answer is no, and yes. A multithreaded solution with multiple user-level threads **can** achieve better performance on a multiprocessor system than on a single-processor system. **If we assume that we have atleast a one-to-one or many-to-many architecture, wherein each user thread may be mapped to its own kernel thread, or, at the very least, we have access to multiple kernel threads, then we can certainly gain better performance with multiple processing cores**. With a single core, the system could only run one kernel thread at a time. This means we would have **no parallelism with a single core**. We would achieve concurrency, but no parallelism. **However**, if we have mutliple cores, then multiple kernel threads can/will run in parallel (at the same time). Therefore, if our threads could truly run completely independent of each other, and didn't wait for the execution or results of any other thread, then a dual-core system could theoretically, in a perfect universe, run twice as fast as a single-core system.
-
-## 4.12
-### In Chapter 3, we discussed Google’s Chrome browser and its practice of opening each new tab in a separate process. Would the same benefits have been achieved if, instead, Chrome had been designed to open each new tab in a separate thread? Explain. 
-No, because one of the primary reasons that a new process was craeted for each browser tab was so that if a single webpage crashed, it would not crash the entire browser. If you used a thread for each tab, then the browser and all of its tabs will be inside of a single process, and if a tab were to crash, the entire application would crash along with it. However, Google Chrome is known to be a memory hog, so if there were a way to mitigate this issue without the creation of separate processes for each tab, then spawning new tabs instead of new processes could help the application use less memory.
-
-## 4.13
-### Is it possible to have concurrency but not parallelism? Explain.
-Yes! Concurrency means that we can run multiple threads or tasks together in the same overlapped time perioud, but it does not mean that we are running them at the same instance in time. If I start two tasks at the same time, and I intermittently switch between the two tasks in order to finish them more efficiently, then I have achieved concurrency. Parallelism, on the other hand, means that I can run multiple tasks at the same instance in time. Therefore, if I have parallelism, then I must also have concurrency, but I can have concurrency without parallelism.
-
-## 4.14
-### Using Amdahl's Law, calculate the speedup gain for the following applications:
-### 1. 40 percent parallel with (a) 8 processing cores and (b) 16 processing cores
-### 2. 67 percent parallel with (a) 2 processing cores and (b) 4 processing cores
-### 3. 90 percent parallel with (a) 4 processing cores and (b) 8 processing cores
-Recall Amdahl's Equation:
-```
-speedup <= 1 / (S + ((1-S)/N))
-```
-1. 
-    - (a) 
-    ``` 
-    speedup <= 1 / (.6 + ((1-.6)/8)) ≈ 1.538
-    ``` 
-    - (b) 
-    ``` 
-    speedup <= 1 / (.6 + ((1-.6)/16)) = 1.6
-    ``` 
-2. 
-    - (a) 
-    ``` 
-    speedup <= 1 / (.33 + ((1-.33)/2)) ≈ 1.504
-    ``` 
-    - (b) 
-    ``` 
-    speedup <= 1 / (.33 + ((1-.33)/4)) = 2.010
-    ``` 
-3. 
-    - (a) 
-    ``` 
-    speedup <= 1 / (.1 + ((1-.1)/4)) ≈ 3.077
-    ``` 
-    - (b) 
-    ``` 
-    speedup <= 1 / (.1 + ((1-.1)/8)) = 4.706
-    ``` 
-
-## 4.15
-### Determine if the following problems exhibit task or data parallelism
-### 1. Using a separate thread to generate a thumbnail for each photo in a collection
-### 2. Transposing a matrix in parallel
-### 3. A networked application where one thread reads from the network and another writes to the network
-### 4. The fork-join array summation application described in Section 4.5.2
-### 5. The Grand Central Dispatch System
-1. Data parallelism - We want to perform the same sort of task/computation on a large set of data, so our goal in making a parallel solution is to do this faster by simply splitting up the data and performing computation on different chunks of the data at the same time.
-2. Data parallelism - We have one task to do: transposing a matrix. This task can be made faster by simply transposing smaller chunks of the matrix (which is our data)
-3. Task parallelism - If one thread is reading from a network, and the other thread is writing to a network, then we can clearly delineate those two operations as separate tasks. 
-4. Data parallelism - The fork-join process is utilized so as to divide the computation into smaller subproblems. In this way, the data is split up into discrete portions and computations are done on those separate chunks of data in parallel.
-5. Task parallelism - Based upon the thread pool pattern, Grand Central Dispatch is utilized to manage all of the tasks in the entire operating system. In this way, GCD is an obcious example task parallelism, wherein multiple discrete tasks are performed in parallel.
-
-## 4.16
-### A system with 2 dual-core processors has 4 processors available for scheduling. A CPU-intensive application is running on this system. All input is performed at program start-up, when a single file must be opened. Similarly, all output is performed just before the program terminates, when the program results must be written to a single file. Between start-up and termination, the program is entirely CPU-bound. Your task is to improve the performance of this application by multithreading it. The application runs on a system that uses the one-to-one threading model (each user thread maps to a kernel thread).
-### 1. How many threads will you create to perform the input and output? Explain.
-### 2. How many threads will you create for the CPU-intensive portion of the application? Explain.
+## 5.10
+### The traditional UNIX scheduler enforces an inverse relationship between priority numbers and priorities: the higher the number, the lower the priority. The scheduler recalculates process priorities once per second using the following function: 
+    Priority = (recent CPU usage / 2) + base
+### where base = 60 and recent CPU usage refers to a value indicating how often a process has used the CPU since priorities were last recalculated. Assume that recent CPU usage for process P1 is 40, for process P2 is 18, and for process P3 is 10. What will be the new priorities for these three processes when priorities are recalculated? Based on this information, does the traditional UNIX scheduler raise or lower the relative priority of a CPU-bound process? 
+- P1 will have a priority of 80, P2 will have a priority of 69, and P3 will have a priority of 65. Based upon this information, we can see that there is a direct relationship between CPU usage and priority number, and an inverse relationship between CPU usage and priority, by transience. P1 in this case has the highest level of recent CPU usage, and therefore is given the lowest priority.

@@ -39,4 +39,4 @@ The general strategy is for a client to send an RPC to the server along with a t
 
 ## 3.7
 ### Assume that a distributed system is susceptible to server failure. What mechanisms would be required to guarantee the “exactly once” semantic for execution of RPCs? 
-Firstly, the server should keep logs in non-volatile storage regarding what RPC operations were received, whether they were successfully performed, and the results associated with the operations. When a server crash takes place and an RPC message is received, the server can check whether the RPC has been performed and therefore guarentee "exactly once" semantics for the execution of RPCs.
+Firstly, the server should keep logs in non-volatile storage regarding what RPC operations were received, whether they were successfully performed, and the results associated with the operations. When a server crash takes place and an RPC message is received, the server can check whether the RPC has been performed and therefore guarantee "exactly once" semantics for the execution of RPCs.
