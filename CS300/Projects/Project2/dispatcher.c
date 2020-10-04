@@ -20,26 +20,26 @@ typedef struct process
     int remaining_processor_time;
 } process;
 
-/**
- * Struct representing a linked list of jobDispatchNodes,
- * each of which contains a list of processes arriving
- * at a particular time.
- */
-typedef struct jobDispatchList
-{
-    jobDispatchNode* head;
-} jobDispatchList;
+// /**
+//  * Struct representing a linked list of jobDispatchNodes,
+//  * each of which contains a list of processes arriving
+//  * at a particular time.
+//  */
+// typedef struct jobDispatchList
+// {
+//     jobDispatchNode* head;
+// } jobDispatchList;
 
-/**
- * Struct representing a list of jobs/processes arriving 
- * at one point in time (arrival time).
- */
-typedef struct jobDispatchNode
-{
-    process* processList;
-    int timestep;
-    jobDispatchNode* next;
-} jobDispatchNode;
+// /**
+//  * Struct representing a list of jobs/processes arriving 
+//  * at one point in time (arrival time).
+//  */
+// typedef struct jobDispatchNode
+// {
+//     process* processList;
+//     int timestep;
+//     jobDispatchNode* next;
+// } jobDispatchNode;
 
 /**
  * Struct represting a process node in a queue
@@ -73,15 +73,21 @@ typedef struct jobQueue
     processNode* rear;
 } jobQueue;
 
-char* int_to_string_on_heap(int x);
+void initialize(jobQueue* q);
+int isEmpty(jobQueue* q);
+void enqueue(jobQueue* q, process p);
+process dequeue(jobQueue* q);
+int terminateProcess(process* p);
+int suspendProcess(process* p);
+int startProcess(process* p);
+int restartProcess(process* p);
 void int_to_string_on_stack(int x, char* x_to_string);
 void parse_process_line(char* processLine, process* my_process);
 int insertSorted(process* processes, int n, process newProcess, int capacity);
 void populate_process_list(process* processList, FILE* fp, int* numProcesses, int* latestArrival);
-void populate_master_job_list(jobDispatchList* masterJobList, process* processList, int* numProcesses, int* latestArrival);
+void updateQueues(int timestep, int i, const int processListSize, process* processList, jobQueue* systemQueue, jobQueue* userQueueHighPriority, jobQueue* userQueueMidPriority, jobQueue* userQueueLowPriority);
 void print_process_list(process* processList, const int processListSize, const int latestArrival);
 void runProcesses(process* processList, const int processListSize, const int latestArrival);
-
 
 /**
  * Initializes a jobQueue to NULL pointers and 0
@@ -105,11 +111,11 @@ int isEmpty(jobQueue* q)
 /**
  * Adds a new processNode to the System Queue
  */
-void enqueue(jobQueue* q, process* p)
+void enqueue(jobQueue* q, process p)
 {
     processNode* tmp;
     tmp = (processNode*)malloc(sizeof(processNode));
-    tmp->p = *p;
+    tmp->p = p;
     tmp->next = NULL;
     if (!isEmpty(q))
     {
@@ -238,25 +244,6 @@ int restartProcess(process* p)
 
 /**
  * Converts a given integer to a string, and returns that string
- * 
- * NOTE: Allocates memory for the new char*, which must be freed later.
- */
-char* int_to_string_on_heap(int x)
-{
-    // Get the length necessary for the string
-    int length = snprintf(NULL, 0, "%d", x);
-
-    // Allocate space for (length+1) chars
-    char* x_to_string = (char*)malloc(sizeof(char)*(length+1));
-
-    // Convert the integer into a string
-    sprintf(x_to_string, "%d", x);
-
-    return x_to_string;
-}
-
-/**
- * Converts a given integer to a string, and returns that string
  */
 void int_to_string_on_stack(int x, char* x_to_string)
 {
@@ -347,57 +334,6 @@ void populate_process_list(process* processList, FILE* fp, int* numProcesses, in
 
     *numProcesses = counter;
 }
-/**
- * Populates the master linked list of jobs with the jobs from processList
- */
-void populate_master_job_list(jobDispatchList* masterJobList, process* processList, int* numProcesses, int* latestArrival)
-{
-    int timestep = 0;
-    int i = 0;
-
-    // Iterate over until we've added every single process in the processList
-    while (i < numProcesses)
-    {
-        // Create a new node for this timestep
-        jobDispatchNode* node = (jobDispatchNode*)malloc(sizeof(jobDispatchNode));
-        node->timestep = timestep;
-
-        // If there is a process(s) at this arrival time, add it (them) to this jobDispatchNode
-        if (timestep == processList[i].arrival_time)
-        {
-            int j = 0;
-            node->processList
-        }
-
-        // Increment the timestep
-        timestep++;
-    }
-
-
-    // Iterate over all of the processes in the processList
-    for (i = 0; i < numProcesses; i++)
-    {
-        // Created temporary queue to store processes with the same arrival time
-        jobQueue arrivalQueue;
-        int arrivalQueueSize = 0;
-        int j = i+1;
-
-        enqueue(&arrivalQueue, &processList[i]);
-        arrivalQueueSize++;
-
-        // Keep adding processes with the same arrival time to the temporary queue
-        while(j < processListSize && processList[j].arrival_time == processList[i].arrival_time)
-        {
-            enqueue(&arrivalQueue, &processList[j]);
-            j++;
-        }
-
-        dequeue(&arrivalQueue);
-
-
-    }
-}
-
 
 /**
  * Prints all of the processes in the processList
@@ -413,6 +349,60 @@ void print_process_list(process* processList, const int processListSize, const i
 }
 
 
+void updateQueues(int timestep, int i, const int processListSize, process* processList, jobQueue* systemQueue, jobQueue* userQueueHighPriority, jobQueue* userQueueMidPriority, jobQueue* userQueueLowPriority)
+{
+
+    // If there is a process(s) at OR BEFORE this arrival time, place it (them) 
+    // in the proper queues
+    if (timestep >= processList[i].arrival_time)
+    {
+        // Create temporary queue to store processes with the same arrival time
+        jobQueue arrivalQueue;
+        int arrivalQueueSize = 0;
+        int j = i+1;
+
+        enqueue(&arrivalQueue, processList[i]);
+        arrivalQueueSize++;
+
+        // Keep adding processes with the same arrival time to the temporary queue
+        while(j < processListSize && processList[j].arrival_time == processList[i].arrival_time)
+        {
+            enqueue(&arrivalQueue, processList[j]);
+            j++;
+        }
+
+        // Add each process at this arrival time to its proper queue 
+        while (!isEmpty(&arrivalQueue))
+        {
+            process my_process = dequeue(&arrivalQueue);
+
+            switch (my_process.priority)
+            {
+                // System queue
+                case 0:
+                    enqueue(systemQueue, my_process);
+                    break;
+
+                // Highest-priority user Queue
+                case 1:
+                    enqueue(userQueueHighPriority, my_process);
+                    break;
+
+                // Medium-priority user Queue
+                case 2:
+                    enqueue(userQueueMidPriority, my_process);
+                    break;
+
+                // Low-priority user Queue
+                case 3:
+                    enqueue(userQueueLowPriority, my_process);
+                    break;
+            }
+        }
+    }
+}
+
+
 /**
  * Runs all of the processes in the process list
  */
@@ -424,30 +414,68 @@ void runProcesses(process* processList, const int processListSize, const int lat
     jobQueue userQueueMidPriority;
     jobQueue userQueueLowPriority;
 
-    int i;
+    int i = 0;
+    int timestep = 0;
 
-    // Iterate over all of the processes in the processList
-    for (i = 0; i < processListSize; i++)
+    // Iterate over until we've added every single process in the processList
+    while (i < processListSize)
     {
-        // Created temporary queue to store processes with the same arrival time
-        jobQueue arrivalQueue;
-        int arrivalQueueSize = 0;
-        int j = i+1;
+        // Add any processes that have arrived at this timestep to the appropriate queues
+        updateQueues(timestep, i, processListSize, processList, &systemQueue, &userQueueHighPriority, &userQueueMidPriority, &userQueueLowPriority);
 
-        enqueue(&arrivalQueue, &processList[i]);
-        arrivalQueueSize++;
-
-        // Keep adding processes with the same arrival time to the temporary queue
-        while(j < processListSize && processList[j].arrival_time == processList[i].arrival_time)
+        // If the system Queue has anything in it...
+        if (!isEmpty(&systemQueue))
         {
-            enqueue(&arrivalQueue, &processList[j]);
-            j++;
+            continue;
+            // TODO: 
+            // 1. Run what is in the system Queue.
+            // 2. Update the timestep by the amount of CPU time that was just used.
+            // 3. Remove that process from the system Queue.
+
         }
-
-        dequeue(&arrivalQueue);
-
-
+        // Else if the highest-priority job queue has anything in it...
+        else if (!isEmpty(&userQueueHighPriority))
+        {
+            continue;
+            // TODO: 
+            // 1. Run what is in userQueueHighPriority.
+            // 2. Update the timestep by the amount of CPU time that was just used.
+            // 3. 
+            //      If the process finished in time, simply remove it from the queue.
+            //      Else if the process was preempted, move it to the userQueueMidPriority.
+        }
+        // Else if the medium-priority job queue has anything in it...
+        else if (!isEmpty(&userQueueMidPriority))
+        {
+            continue;
+            // TODO: 
+            // 1. Run what is in userQueueMidPriority.
+            // 2. Update the timestep by the amount of CPU time that was just used.
+            // 3. 
+            //      If the process finished in time, simply remove it from the queue.
+            //      Else if the process was preempted, move it to the userQueueLowPriority.
+        }
+        // Else if the lowest-priority job queue has anything in it...
+        else if (!isEmpty(&userQueueMidPriority))
+        {
+            continue;
+            // TODO: 
+            // 1. Run what is in userQueueLowPriority.
+            // 2. Update the timestep by the amount of CPU time that was just used.
+            // 3. 
+            //      If the process finished in time, simply remove it from the queue.
+            //      Else if the process was preempted, move it back around to the 
+            //          userQueueLowPriority in a circular fashion.
+        }
+        // Else, if there are no jobs to run at all...
+        else
+        {
+            continue;
+            // Increment the timestep
+            timestep++;
+        }
     }
+
 }
 
 
@@ -455,12 +483,13 @@ int main(int argc, char** argv)
 {
     FILE* fp;
     process processList[MAX_PROCESSES];
-    jobDispatchList* masterJobList = (jobDispatchList*)malloc(sizeof(masterJobList));
     int numProcesses;
     int latestArrival = 0;
 
     // Get the filename from the command line
-    char* filename = argv[1];
+    // char* filename = argv[1];
+    char* filename = "sampleInput.txt";
+
     // Open the file containing processes
     fp = fopen(filename, "r");
 
@@ -474,10 +503,7 @@ int main(int argc, char** argv)
     // Add all of the processes to the list of processes in sorted order
     // of non-decreasing arrival time.
     populate_process_list(processList, fp, &numProcesses, &latestArrival);
-
-    populate_master_job_list(masterJobList, processList, &numProcesses, &latestArrival);
-
-
+    // populate_master_job_list(masterJobList, processList, &numProcesses, &latestArrival);
 
     print_process_list(processList, numProcesses, latestArrival);
 
