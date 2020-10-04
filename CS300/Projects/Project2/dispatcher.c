@@ -21,6 +21,27 @@ typedef struct process
 } process;
 
 /**
+ * Struct representing a linked list of jobDispatchNodes,
+ * each of which contains a list of processes arriving
+ * at a particular time.
+ */
+typedef struct jobDispatchList
+{
+    jobDispatchNode* head;
+} jobDispatchList;
+
+/**
+ * Struct representing a list of jobs/processes arriving 
+ * at one point in time (arrival time).
+ */
+typedef struct jobDispatchNode
+{
+    process* processList;
+    int timestep;
+    jobDispatchNode* next;
+} jobDispatchNode;
+
+/**
  * Struct represting a process node in a queue
  */
 typedef struct processNode
@@ -56,7 +77,11 @@ char* int_to_string_on_heap(int x);
 void int_to_string_on_stack(int x, char* x_to_string);
 void parse_process_line(char* processLine, process* my_process);
 int insertSorted(process* processes, int n, process newProcess, int capacity);
-int populate_process_list(process* processList, FILE* fp);
+void populate_process_list(process* processList, FILE* fp, int* numProcesses, int* latestArrival);
+void populate_master_job_list(jobDispatchList* masterJobList, process* processList, int* numProcesses, int* latestArrival);
+void print_process_list(process* processList, const int processListSize, const int latestArrival);
+void runProcesses(process* processList, const int processListSize, const int latestArrival);
+
 
 /**
  * Initializes a jobQueue to NULL pointers and 0
@@ -296,7 +321,7 @@ int insertSorted(process* processes, int n, process newProcess, int capacity)
  * 
  * Returns the total length of the processList.
  */
-int populate_process_list(process* processList, FILE* fp)
+void populate_process_list(process* processList, FILE* fp, int* numProcesses, int* latestArrival)
 {
     int counter = 0;
     char processLine[MAX_LINE_CHARS];
@@ -312,21 +337,116 @@ int populate_process_list(process* processList, FILE* fp)
         // Insert the process into the (sorted by arrival time)
         // process list, and increment the size counter.
         insertSorted(processList, counter, newProcess, MAX_PROCESSES);
+
+        // Keep track of the latest arrival time in the entire list of processes
+        if (newProcess.arrival_time > *latestArrival)
+            *latestArrival = newProcess.arrival_time;
+
         counter++;
     }
 
-    return counter;
+    *numProcesses = counter;
 }
+/**
+ * Populates the master linked list of jobs with the jobs from processList
+ */
+void populate_master_job_list(jobDispatchList* masterJobList, process* processList, int* numProcesses, int* latestArrival)
+{
+    int timestep = 0;
+    int i = 0;
+
+    // Iterate over until we've added every single process in the processList
+    while (i < numProcesses)
+    {
+        // Create a new node for this timestep
+        jobDispatchNode* node = (jobDispatchNode*)malloc(sizeof(jobDispatchNode));
+        node->timestep = timestep;
+
+        // If there is a process(s) at this arrival time, add it (them) to this jobDispatchNode
+        if (timestep == processList[i].arrival_time)
+        {
+            int j = 0;
+            node->processList
+        }
+
+        // Increment the timestep
+        timestep++;
+    }
+
+
+    // Iterate over all of the processes in the processList
+    for (i = 0; i < numProcesses; i++)
+    {
+        // Created temporary queue to store processes with the same arrival time
+        jobQueue arrivalQueue;
+        int arrivalQueueSize = 0;
+        int j = i+1;
+
+        enqueue(&arrivalQueue, &processList[i]);
+        arrivalQueueSize++;
+
+        // Keep adding processes with the same arrival time to the temporary queue
+        while(j < processListSize && processList[j].arrival_time == processList[i].arrival_time)
+        {
+            enqueue(&arrivalQueue, &processList[j]);
+            j++;
+        }
+
+        dequeue(&arrivalQueue);
+
+
+    }
+}
+
 
 /**
  * Prints all of the processes in the processList
  */
-void print_process_list(process* processList, int processListSize)
+void print_process_list(process* processList, const int processListSize, const int latestArrival)
 {
     int i;
     for (i = 0; i < processListSize; i++)
     {
         printf("processList[%d].arrival_time = %d\n", i, processList[i].arrival_time);
+    }
+    printf("Latest arrival time = %d\n", latestArrival);
+}
+
+
+/**
+ * Runs all of the processes in the process list
+ */
+void runProcesses(process* processList, const int processListSize, const int latestArrival)
+{
+    // Create all 4 queues
+    jobQueue systemQueue;
+    jobQueue userQueueHighPriority;
+    jobQueue userQueueMidPriority;
+    jobQueue userQueueLowPriority;
+
+    int i;
+
+    // Iterate over all of the processes in the processList
+    for (i = 0; i < processListSize; i++)
+    {
+        // Created temporary queue to store processes with the same arrival time
+        jobQueue arrivalQueue;
+        int arrivalQueueSize = 0;
+        int j = i+1;
+
+        enqueue(&arrivalQueue, &processList[i]);
+        arrivalQueueSize++;
+
+        // Keep adding processes with the same arrival time to the temporary queue
+        while(j < processListSize && processList[j].arrival_time == processList[i].arrival_time)
+        {
+            enqueue(&arrivalQueue, &processList[j]);
+            j++;
+        }
+
+        dequeue(&arrivalQueue);
+
+
     }
 }
 
@@ -335,13 +455,9 @@ int main(int argc, char** argv)
 {
     FILE* fp;
     process processList[MAX_PROCESSES];
+    jobDispatchList* masterJobList = (jobDispatchList*)malloc(sizeof(masterJobList));
     int numProcesses;
     int latestArrival = 0;
-
-    jobQueue systemQueue;
-    jobQueue userQueueHighPriority;
-    jobQueue userQueueMidPriority;
-    jobQueue userQueueLowPriority;
 
     // Get the filename from the command line
     char* filename = argv[1];
@@ -357,12 +473,19 @@ int main(int argc, char** argv)
 
     // Add all of the processes to the list of processes in sorted order
     // of non-decreasing arrival time.
-    numProcesses = populate_process_list(processList, fp);
-    print_process_list(processList, numProcesses);
+    populate_process_list(processList, fp, &numProcesses, &latestArrival);
 
-    
+    populate_master_job_list(masterJobList, processList, &numProcesses, &latestArrival);
+
+
+
+    print_process_list(processList, numProcesses, latestArrival);
+
+    // Run the processes in the processList
+    runProcesses(processList, numProcesses, latestArrival);
 
 
     printf("Goodbye, world!\n");
+    fclose(fp);
     return 0;
 }
