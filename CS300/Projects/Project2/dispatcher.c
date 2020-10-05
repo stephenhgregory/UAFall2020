@@ -10,12 +10,12 @@
 #define MAX_PROCESSES 1000
 #define TIME_QUANTUM 1
 
-// Comment this line of code out when not running from VS Code's debugger
-#define VSCODE_DEBUG 1
+// // Comment this line of code out when not running from VS Code's debugger
+// #define VSCODE_DEBUG 1
 
-// Comment this line of code out when not using extended debugging
-// (extra print statements)
-#define EXTENDED_DEBUG 1
+// // Comment this line of code out when not using extended debugging
+// // (extra print statements)
+// #define EXTENDED_DEBUG 1
 
 
 /**
@@ -73,7 +73,7 @@ void int_to_string_on_stack(int x, char* x_to_string);
 void parse_process_line(char* processLine, process* my_process);
 int insertSorted(process* processes, int n, process newProcess, int capacity);
 void populate_process_list(process* processList, FILE* fp, int* numProcesses, int* latestArrival);
-void updateQueuesWithArrivals(int timestep, int i, const int processListSize, process* processList, jobQueue* systemQueue, jobQueue* userQueueHighPriority, jobQueue* userQueueMidPriority, jobQueue* userQueueLowPriority);
+void updateQueuesWithArrivals(int timestep, int* i, const int processListSize, process* processList, jobQueue* systemQueue, jobQueue* userQueueHighPriority, jobQueue* userQueueMidPriority, jobQueue* userQueueLowPriority);
 void print_process_list(process* processList, const int processListSize, const int latestArrival);
 void runProcesses(process* processList, const int processListSize, const int latestArrival);
 
@@ -343,26 +343,36 @@ void print_process_list(process* processList, const int processListSize, const i
 }
 
 
-void updateQueuesWithArrivals(int timestep, int i, const int processListSize, process* processList, jobQueue* systemQueue, jobQueue* userQueueHighPriority, jobQueue* userQueueMidPriority, jobQueue* userQueueLowPriority)
+void updateQueuesWithArrivals(int timestep, int* i, const int processListSize, process* processList, jobQueue* systemQueue, jobQueue* userQueueHighPriority, jobQueue* userQueueMidPriority, jobQueue* userQueueLowPriority)
 {
+    // Create temporary queue to store processes with the same arrival time
+    jobQueue arrivalQueue;
+    initialize(&arrivalQueue);
+
+    // Initialize the size of the arrivalQueue (the queue of processes 
+    // at this arrival time)
+    int arrivalQueueSize = 0;
+
+    // Initialize j to be the index of the NEXT process that we HAVE NOT
+    // picked out yet in the processList
+    int j = *i;
 
     // If there is a process(s) at OR BEFORE this arrival time, place it (them) 
     // in the proper queues
-    if (timestep >= processList[i].arrival_time)
+    if (timestep >= processList[*i].arrival_time)
     {
-        // Create temporary queue to store processes with the same arrival time
-        jobQueue arrivalQueue;
-        initialize(&arrivalQueue);
-        int arrivalQueueSize = 0;
-        int j = i+1;
+        // Update j to be the index of the NEXT process, because we just
+        // picked one out in the above processList matching this timestep  
+        j++;
 
-        enqueue(&arrivalQueue, processList[i]);
+        enqueue(&arrivalQueue, processList[*i]);
         arrivalQueueSize++;
 
         // Keep adding processes with the same arrival time to the temporary queue
-        while(j < processListSize && processList[j].arrival_time == processList[i].arrival_time)
+        while(j < processListSize && processList[j].arrival_time == processList[*i].arrival_time)
         {
             enqueue(&arrivalQueue, processList[j]);
+            arrivalQueueSize++;
             j++;
         }
 
@@ -395,6 +405,127 @@ void updateQueuesWithArrivals(int timestep, int i, const int processListSize, pr
             }
         }
     }
+    // Update i to account for the number of processes in the processList 
+    // that we just picked out
+    *i = j;
+}
+
+/**
+ * Runs a process from the system queue
+ * 
+ * Steps: 
+ * 1. Run what is in the system Queue.
+ * 2. Update the timestep by the amount of CPU time that was just used.
+ * 3. Remove that process from the system Queue.
+ */
+void runProcessFromSystemQueue(jobQueue* systemQueue)
+{
+    // Declare variables to store result of starting/restarting a process,
+    // as well as the status from waitpid()
+    int processRunResult;
+    int status;
+
+    // Get the process to run from the front of the system queue
+    process process_to_run = dequeue(systemQueue);
+
+    // If the process did not already exist, start the process.
+    if (process_to_run.pid == -1)
+    {
+        processRunResult = startProcess(&process_to_run);
+    }
+    // Else, if it did already exist, restart it.
+    else
+    {
+        processRunResult = restartProcess(&process_to_run);
+    }
+
+    // Wait for the full amount of time required by the process
+    sleep(process_to_run.remaining_processor_time);
+
+    // Terminate the process
+    processRunResult = terminateProcess(&process_to_run);
+
+    // Wait on the process to respond before continuing
+    waitpid(process_to_run.pid, &status, WUNTRACED);
+
+    // Exit with an error message if there was a problem
+    if (processRunResult)
+    {
+        perror("There was an error running a process.");
+        exit(1);
+    }
+}
+
+
+/**
+ * Runs a process from a user queue
+ * 
+ * Steps: 
+ * 1. Run the process at the front of this userQueue.
+ * 2. Update the timestep by the amount of CPU time that was just used.
+ * 3. 
+ *      If the process finished in time, simply remove it from the queue.
+ *      Else if the process was preempted, either move it to the 
+ *          next lower priority user queue, or move it back to the same
+ *          user queue if it's already in the lowest priority user queue.
+ */
+void runProcessFromUserQueue(jobQueue* userQueue, jobQueue* nextQueue)
+{
+    // Declare variables to store result of starting/restarting a process,
+    // as well as the status from waitpid()
+    int processRunResult;
+    int status;
+
+    // Get the process to run from the front of this particular user Queue
+    process process_to_run = dequeue(userQueue);
+
+    // If the process did not already exist, start the process.
+    if (process_to_run.pid == -1)
+    {
+        processRunResult = startProcess(&process_to_run);
+    }
+    // Else, if it did already exist, restart it.
+    else
+    {
+        processRunResult = restartProcess(&process_to_run);
+    }
+
+    // Wait for one time quantum
+    sleep(TIME_QUANTUM);
+
+    // Decrement the remaining processor time for the process by one time quantum
+    process_to_run.remaining_processor_time -= TIME_QUANTUM;
+
+    // If the process has no remaining processor time...
+    if (process_to_run.remaining_processor_time < 1)
+    {
+        // Terminate the process
+        terminateProcess(&process_to_run);
+
+        // Wait on the process to respond before continuing
+        waitpid(process_to_run.pid, &status, WUNTRACED);
+    }
+    // Else, if there is still remaining processing time...
+    else 
+    {
+        // Suspend the process
+        suspendProcess(&process_to_run);
+
+        // Wait on the process to respond before continuing
+        waitpid(process_to_run.pid, &status, WUNTRACED);
+
+        // Demote this process to the lower priority user queue, if there
+        // is one.
+        process_to_run.priority++;
+        enqueue(nextQueue, process_to_run);
+    }
+
+    // Return with an error message if there was a problem
+    if (processRunResult)
+    {
+        perror("There was an error running a process.");
+        exit(1);
+    }
 }
 
 
@@ -415,110 +546,27 @@ void runProcesses(process* processList, const int processListSize, const int lat
 
     int i = 0;
     int timestep = 0;
-    int status;
-    int processRunResult = 0;
 
-    // Iterate over until we've added every single process in the processList
-    while (i < processListSize)
+    // Loop until we've completed every single process in the processList
+    while (1)
     {
         // Add any processes that have arrived at this timestep to the appropriate queues
-        updateQueuesWithArrivals(timestep, i, processListSize, processList, &systemQueue, &userQueueHighPriority, &userQueueMidPriority, &userQueueLowPriority);
+        updateQueuesWithArrivals(timestep, &i, processListSize, processList, &systemQueue, &userQueueHighPriority, &userQueueMidPriority, &userQueueLowPriority);
 
         // If the system Queue has anything in it...
         if (!isEmpty(&systemQueue))
         {
-            // TODO: 
-            // 1. Run what is in the system Queue.
-            // 2. Update the timestep by the amount of CPU time that was just used.
-            // 3. Remove that process from the system Queue.
-
-            // Get the process to run from the front of the system queue
-            process process_to_run = dequeue(&systemQueue);
-
-            // If the process did not already exist, start the process.
-            if (process_to_run.pid == -1)
-            {
-                printf("Starting process now (process.pid = %d, process.arrival_time = %d, process.priority = %d, process_to_run.remaining_processor_time = %d)...\n", process_to_run.pid, process_to_run.arrival_time, process_to_run.priority, process_to_run.remaining_processor_time);
-                processRunResult = startProcess(&process_to_run);
-            }
-            // Else, if it did already exist, restart it.
-            else
-            {
-                printf("Restarting process now...\n");
-                processRunResult = restartProcess(&process_to_run);
-            }
-                
-            // Wait for the process to finish its execution
-            while (waitpid(process_to_run.pid, &status, WUNTRACED));
-
-            // Account for the processing time used by the process
-            timestep += process_to_run.remaining_processor_time;
-
-            // Return with an error message if there was a problem
-            if (processRunResult)
-            {
-                perror("There was an error running a process.");
-                return;
-            }
+            // Run the process at the front of the system queue until it's finished
+            runProcessFromSystemQueue(&systemQueue);
 
             continue;
         }
         // Else if the highest-priority job queue has anything in it...
         else if (!isEmpty(&userQueueHighPriority))
         {
-            // TODO: 
-            // 1. Run what is in userQueueHighPriority.
-            // 2. Update the timestep by the amount of CPU time that was just used.
-            // 3. 
-            //      If the process finished in time, simply remove it from the queue.
-            //      Else if the process was preempted, move it to the userQueueMidPriority.
-
-            printf("Inside of high priority user Queue...\n");
-
-            // Get the process to run from the front of the highest-priority user Queue
-            process process_to_run = dequeue(&userQueueHighPriority);
-
-            // If the process did not already exist, start the process.
-            if (process_to_run.pid == -1)
-            {
-                printf("Starting process now (process.pid = %d, process.arrival_time = %d, process.priority = %d, process_to_run.remaining_processor_time = %d)...\n", process_to_run.pid, process_to_run.arrival_time, process_to_run.priority, process_to_run.remaining_processor_time);
-                processRunResult = startProcess(&process_to_run);
-                printf("Done starting process (process.pid = %d, process.arrival_time = %d, process.priority = %d, process_to_run.remaining_processor_time = %d)...\n", process_to_run.pid, process_to_run.arrival_time, process_to_run.priority, process_to_run.remaining_processor_time);
-            }
-            // Else, if it did already exist, restart it.
-            else
-            {
-                printf("Restarting process now...\n");
-                processRunResult = restartProcess(&process_to_run);
-            }
-
-            // Wait for one time quantum
-            sleep(TIME_QUANTUM);
-
-            // Decrement the remaining processor time for the process by one time quantum
-            process_to_run.remaining_processor_time -= TIME_QUANTUM;
-
-            printf("Just decremented processor time (process.pid = %d, process.arrival_time = %d, process.priority = %d, process_to_run.remaining_processor_time = %d)...\n", process_to_run.pid, process_to_run.arrival_time, process_to_run.priority, process_to_run.remaining_processor_time);
-
-            // If the process has no remaining processor time...
-            if (process_to_run.remaining_processor_time < 1)
-            {
-                // Terminate the process
-                terminateProcess(&process_to_run);
-            }
-            // Else, if there is still remaining processing time...
-            else 
-            {
-                // Suspend the process
-                suspendProcess(&process_to_run);
-
-                // Wait on the process to respond before continuing
-                waitpid(process_to_run.pid, &status, WUNTRACED);
-
-                // Demote this process to the lower priority user queue
-                process_to_run.priority--;
-                enqueue(&userQueueMidPriority, process_to_run);
-            }
+            // Run the process from this queue, and demote it to the mid priority queue
+            // if it doesn't finish in time
+            runProcessFromUserQueue(&userQueueHighPriority, &userQueueMidPriority);
 
             // Add one time quantum to the current timestep
             timestep += TIME_QUANTUM;
@@ -527,57 +575,9 @@ void runProcesses(process* processList, const int processListSize, const int lat
         // Else if the medium-priority job queue has anything in it...
         else if (!isEmpty(&userQueueMidPriority))
         {
-            // TODO: 
-            // 1. Run what is in userQueueMidPriority.
-            // 2. Update the timestep by the amount of CPU time that was just used.
-            // 3. 
-            //      If the process finished in time, simply remove it from the queue.
-            //      Else if the process was preempted, move it to the userQueueLowPriority.
-
-            printf("Inside of medium priority user Queue...\n");
-
-
-            // Get the process to run from the front of the highest-priority user Queue
-            process process_to_run = dequeue(&userQueueMidPriority);
-
-            // If the process did not already exist, start the process.
-            if (process_to_run.pid == -1)
-            {
-                printf("Starting process now (process.pid = %d, process.arrival_time = %d, process.priority = %d, process_to_run.remaining_processor_time = %d)...\n", process_to_run.pid, process_to_run.arrival_time, process_to_run.priority, process_to_run.remaining_processor_time);
-                processRunResult = startProcess(&process_to_run);
-            }
-            // Else, if it did already exist, restart it.
-            else
-            {
-                printf("Restarting process now...\n");
-                processRunResult = restartProcess(&process_to_run);
-            }
-
-            // Wait for one time quantum
-            sleep(TIME_QUANTUM);
-
-            // Decrement the remaining processor time for the process by one time quantum
-            process_to_run.remaining_processor_time -= TIME_QUANTUM;
-
-            // If the process has no remaining processor time...
-            if (process_to_run.remaining_processor_time < 1)
-            {
-                // Terminate the process
-                terminateProcess(&process_to_run);
-            }
-            // Else, if there is still remaining processing time...
-            else 
-            {
-                // Suspend the process
-                suspendProcess(&process_to_run);
-
-                // Wait on the process to respond before continuing
-                waitpid(process_to_run.pid, &status, WUNTRACED);
-
-                // Demote this process to the lower priority user queue
-                process_to_run.priority--;
-                enqueue(&userQueueLowPriority, process_to_run);
-            }
+            // Run the process from this queue, and demote it to the low priority queue
+            // if it doesn't finish in time
+            runProcessFromUserQueue(&userQueueMidPriority, &userQueueLowPriority);
 
             // Add one time quantum to the current timestep
             timestep += TIME_QUANTUM;
@@ -586,59 +586,9 @@ void runProcesses(process* processList, const int processListSize, const int lat
         // Else if the lowest-priority job queue has anything in it...
         else if (!isEmpty(&userQueueLowPriority))
         {
-            // TODO: 
-            // 1. Run what is in userQueueLowPriority.
-            // 2. Update the timestep by the amount of CPU time that was just used.
-            // 3. 
-            //      If the process finished in time, simply remove it from the queue.
-            //      Else if the process was preempted, move it back around to the 
-            //          userQueueLowPriority in a circular fashion.
-
-            printf("Inside of low priority user Queue...\n");
-
-            
-            // Get the process to run from the front of the lowest-priority user Queue
-            process process_to_run = dequeue(&userQueueLowPriority);
-
-            // If the process did not already exist, start the process.
-            if (process_to_run.pid == -1)
-            {
-                printf("Starting process now (process.pid = %d, process.arrival_time = %d, process.priority = %d, process_to_run.remaining_processor_time = %d)...\n", process_to_run.pid, process_to_run.arrival_time, process_to_run.priority, process_to_run.remaining_processor_time);
-                processRunResult = startProcess(&process_to_run);
-            }
-            // Else, if it did already exist, restart it.
-            else
-            {
-                printf("Restarting process now...\n");
-                processRunResult = restartProcess(&process_to_run);
-            }
-
-            // Wait for one time quantum
-            sleep(TIME_QUANTUM);
-
-            // Decrement the remaining processor time for the process by one time quantum
-            process_to_run.remaining_processor_time -= TIME_QUANTUM;
-
-            // If the process has no remaining processor time...
-            if (process_to_run.remaining_processor_time < 1)
-            {
-                // Terminate the process
-                terminateProcess(&process_to_run);
-            }
-            // Else, if there is still remaining processing time...
-            else 
-            {
-                // Suspend the process
-                suspendProcess(&process_to_run);
-
-                // Wait on the process to respond before continuing
-                waitpid(process_to_run.pid, &status, WUNTRACED);
-
-                // Return this proceses to the rear of the same lowest 
-                // priority user queue
-                process_to_run.priority--;
-                enqueue(&userQueueLowPriority, process_to_run);
-            }
+            // Run the process from this queue, and move it to the end of this same 
+            // low priority queue if it doesn't finish in time.
+            runProcessFromUserQueue(&userQueueLowPriority, &userQueueLowPriority);
 
             // Add one time quantum to the current timestep
             timestep += TIME_QUANTUM;
@@ -647,10 +597,20 @@ void runProcesses(process* processList, const int processListSize, const int lat
         // Else, if there are no jobs to run at all...
         else
         {
-            // Sleep for one time quantum and increment the timestep by one time quantum
-            sleep(TIME_QUANTUM);
-            timestep += TIME_QUANTUM;
-            continue;
+            // If the entire processList has been exhausted, break from the while loop
+            if (i >= processListSize)
+            {
+                printf("We should be done now. Bye! \n");
+                break;
+            }
+            // Otherwise...
+            else
+            {
+                // Sleep for one time quantum and increment the timestep by one time quantum
+                sleep(TIME_QUANTUM);
+                timestep += TIME_QUANTUM;
+                continue;
+            }
         }
     }
 
