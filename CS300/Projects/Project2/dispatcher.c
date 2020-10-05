@@ -10,8 +10,8 @@
 #define MAX_PROCESSES 1000
 #define TIME_QUANTUM 1
 
-// Comment this line of code out when not running from VS Code's debugger
-#define VSCODE_DEBUG 1
+// // Comment this line of code out when not running from VS Code's debugger
+// #define VSCODE_DEBUG 1
 
 // // Comment this line of code out when not using extended debugging
 // // (extra print statements)
