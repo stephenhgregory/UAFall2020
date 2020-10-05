@@ -205,8 +205,13 @@ int startProcess(process* p)
         args[0] = processorTime;
         args[1] = NULL;
 
-        // Replace the current executing program with "./process" to (re)run that process
-        execvp("./process", args);
+        // Replace the current executing program with "./process" to run that process
+        if (execvp("./process", args))
+        {
+            printf("Error calling execvp().\n");
+            exit(1);
+        }
+        exit(0);
     }
     // Parent process
     else if (pid > 0)
@@ -242,7 +247,12 @@ int restartProcess(process* p)
         args[1] = NULL;
 
         // Replace the current executing program with "./process" to (re)run that process
-        execvp("./process", args);
+        if (execvp("./process", args))
+        {
+            printf("Error calling execvp().\n");
+            exit(1);
+        }
+        exit(0);
     }
     // Parent process
     else if (pid > 0)
