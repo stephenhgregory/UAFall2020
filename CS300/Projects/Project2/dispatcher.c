@@ -232,36 +232,8 @@ int startProcess(process* p)
  */
 int restartProcess(process* p)
 {
-    // Fork the current process to create a new process
-    pid_t pid = fork();
-
-    // Child process
-    if (pid == 0)
-    {
-        // Get the command line arguments
-        int stringLength = snprintf(NULL, 0, "%d", p->remaining_processor_time);
-        char processorTime[stringLength+1]; 
-        int_to_string_on_stack(p->remaining_processor_time, processorTime);
-        char* args[2];
-        args[0] = processorTime;
-        args[1] = NULL;
-
-        // Replace the current executing program with "./process" to (re)run that process
-        if (execvp("./process", args))
-        {
-            printf("Error calling execvp().\n");
-            exit(1);
-        }
-        exit(0);
-    }
-    // Parent process
-    else if (pid > 0)
-    {
-        // Do nothing, and just return 0
-        return 0;
-    }    
-    // Otherwise, fork() must have failed
-    return -1;
+    // Send a signal to the process to start again
+    return kill(p->pid, SIGCONT);
 }
 
 /**
@@ -444,6 +416,7 @@ void runProcesses(process* processList, const int processListSize, const int lat
     int i = 0;
     int timestep = 0;
     int status;
+    int processRunResult = 0;
 
     // Iterate over until we've added every single process in the processList
     while (i < processListSize)
@@ -462,8 +435,19 @@ void runProcesses(process* processList, const int processListSize, const int lat
             // Get the process to run from the front of the system queue
             process process_to_run = dequeue(&systemQueue);
 
-            // Run the process
-            int processRunResult = startProcess(&process_to_run);
+            // If the process did not already exist, start the process.
+            if (process_to_run.pid == -1)
+            {
+                printf("Starting process now (process.pid = %d, process.arrival_time = %d, process.priority = %d)...\n", process_to_run.pid, process_to_run.arrival_time, process_to_run.priority);
+                processRunResult = startProcess(&process_to_run);
+            }
+            // Else, if it did already exist, restart it.
+            else
+            {
+                printf("Restarting process now...\n");
+                processRunResult = restartProcess(&process_to_run);
+            }
+                
 
             // Wait for the process to finish its execution
             while (waitpid(process_to_run.pid, &status, WUNTRACED));
@@ -493,9 +477,18 @@ void runProcesses(process* processList, const int processListSize, const int lat
             // Get the process to run from the front of the highest-priority user Queue
             process process_to_run = dequeue(&userQueueHighPriority);
 
-            // Run the process
-            int result = startProcess(&process_to_run);
-            printf("result = %d\n", result); // TODO: Delete this line
+            // If the process did not already exist, start the process.
+            if (process_to_run.pid == -1)
+            {
+                printf("Starting process now (process.pid = %d, process.arrival_time = %d, process.priority = %d)...\n", process_to_run.pid, process_to_run.arrival_time, process_to_run.priority);
+                processRunResult = startProcess(&process_to_run);
+            }
+            // Else, if it did already exist, restart it.
+            else
+            {
+                printf("Restarting process now...\n");
+                processRunResult = restartProcess(&process_to_run);
+            }
 
             // Wait for one time quantum
             sleep(TIME_QUANTUM);
@@ -507,6 +500,7 @@ void runProcesses(process* processList, const int processListSize, const int lat
                 waitpid(process_to_run.pid, &status, WUNTRACED);
 
                 // Demote this process to the lower priority user queue
+                process_to_run.priority--;
                 enqueue(&userQueueMidPriority, process_to_run);
 
                 // Decrement the remaining processor time for the process by one time quantum
@@ -542,9 +536,18 @@ void runProcesses(process* processList, const int processListSize, const int lat
             // Get the process to run from the front of the highest-priority user Queue
             process process_to_run = dequeue(&userQueueMidPriority);
 
-            // Run the process
-            int result = startProcess(&process_to_run);
-            printf("result = %d\n", result); // TODO: Delete this line
+            // If the process did not already exist, start the process.
+            if (process_to_run.pid == -1)
+            {
+                printf("Starting process now (process.pid = %d, process.arrival_time = %d, process.priority = %d)...\n", process_to_run.pid, process_to_run.arrival_time, process_to_run.priority);
+                processRunResult = startProcess(&process_to_run);
+            }
+            // Else, if it did already exist, restart it.
+            else
+            {
+                printf("Restarting process now...\n");
+                processRunResult = restartProcess(&process_to_run);
+            }
 
             // Wait for one time quantum
             sleep(TIME_QUANTUM);
@@ -556,6 +559,7 @@ void runProcesses(process* processList, const int processListSize, const int lat
                 waitpid(process_to_run.pid, &status, WUNTRACED);
 
                 // Demote this process to the lowest priority user queue
+                process_to_run.priority--;
                 enqueue(&userQueueLowPriority, process_to_run);
 
                 // Decrement the remaining processor time for the process by one time quantum
@@ -592,9 +596,18 @@ void runProcesses(process* processList, const int processListSize, const int lat
             // Get the process to run from the front of the highest-priority user Queue
             process process_to_run = dequeue(&userQueueHighPriority);
 
-            // Run the process
-            int result = startProcess(&process_to_run);
-            printf("result = %d", result); // TODO: Delete this line
+            // If the process did not already exist, start the process.
+            if (process_to_run.pid == -1)
+            {
+                printf("Starting process now (process.pid = %d, process.arrival_time = %d, process.priority = %d)...\n", process_to_run.pid, process_to_run.arrival_time, process_to_run.priority);
+                processRunResult = startProcess(&process_to_run);
+            }
+            // Else, if it did already exist, restart it.
+            else
+            {
+                printf("Restarting process now...\n");
+                processRunResult = restartProcess(&process_to_run);
+            }
 
             // Wait for one time quantum
             sleep(TIME_QUANTUM);
