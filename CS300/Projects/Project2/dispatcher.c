@@ -9,6 +9,14 @@
 #define MAX_LINE_CHARS 1000
 #define MAX_PROCESSES 1000
 
+// // Comment this line of code out when not running from VS Code's debugger
+// #define VSCODE_DEBUG 1
+
+// Comment this line of code out when not using extended debugging
+// (extra print statements)
+#define EXTENDED_DEBUG 1
+
+
 /**
  * Struct representing a process
  */
@@ -64,7 +72,7 @@ void int_to_string_on_stack(int x, char* x_to_string);
 void parse_process_line(char* processLine, process* my_process);
 int insertSorted(process* processes, int n, process newProcess, int capacity);
 void populate_process_list(process* processList, FILE* fp, int* numProcesses, int* latestArrival);
-void updateQueues(int timestep, int i, const int processListSize, process* processList, jobQueue* systemQueue, jobQueue* userQueueHighPriority, jobQueue* userQueueMidPriority, jobQueue* userQueueLowPriority);
+void updateQueuesWithArrivals(int timestep, int i, const int processListSize, process* processList, jobQueue* systemQueue, jobQueue* userQueueHighPriority, jobQueue* userQueueMidPriority, jobQueue* userQueueLowPriority);
 void print_process_list(process* processList, const int processListSize, const int latestArrival);
 void runProcesses(process* processList, const int processListSize, const int latestArrival);
 
@@ -132,14 +140,8 @@ process dequeue(jobQueue* q)
     q->front = q->front->next;
     q->count--;
 
-    // If the count is 0, set q->front to NULL
-    // TODO: figure out why this is working this way
-    if (q->count == 0)
-        q->front = NULL;
-
-
     // If front becomes NULL, then change rear to NULL as well
-    if (q->front = NULL)
+    if (q->front == NULL)
         q->rear = NULL;
 
     // Free the memory of the now chopped-off processNode, and
@@ -179,6 +181,9 @@ int suspendProcess(process* p)
 
 /**
  * Starts a given process p
+ * 
+ * NOTE: This function modifies the process p by setting its pid field
+ * equal to the pid of the process.
  * 
  * If starting the process is successful, function returns 0.
  * Else, if starting the process is unsuccessful, function returns -1.
@@ -353,7 +358,7 @@ void print_process_list(process* processList, const int processListSize, const i
 }
 
 
-void updateQueues(int timestep, int i, const int processListSize, process* processList, jobQueue* systemQueue, jobQueue* userQueueHighPriority, jobQueue* userQueueMidPriority, jobQueue* userQueueLowPriority)
+void updateQueuesWithArrivals(int timestep, int i, const int processListSize, process* processList, jobQueue* systemQueue, jobQueue* userQueueHighPriority, jobQueue* userQueueMidPriority, jobQueue* userQueueLowPriority)
 {
 
     // If there is a process(s) at OR BEFORE this arrival time, place it (them) 
@@ -430,17 +435,30 @@ void runProcesses(process* processList, const int processListSize, const int lat
     while (i < processListSize)
     {
         // Add any processes that have arrived at this timestep to the appropriate queues
-        updateQueues(timestep, i, processListSize, processList, &systemQueue, &userQueueHighPriority, &userQueueMidPriority, &userQueueLowPriority);
+        updateQueuesWithArrivals(timestep, i, processListSize, processList, &systemQueue, &userQueueHighPriority, &userQueueMidPriority, &userQueueLowPriority);
 
         // If the system Queue has anything in it...
         if (!isEmpty(&systemQueue))
         {
-            continue;
             // TODO: 
             // 1. Run what is in the system Queue.
             // 2. Update the timestep by the amount of CPU time that was just used.
             // 3. Remove that process from the system Queue.
 
+            // Get the process to run from the front of the system queue
+            process process_to_run = dequeue(&systemQueue);
+
+            // Run the process
+            int processRunResult = startProcess(&process_to_run);
+
+            // Account for the processing time used by the process
+            timestep += process_to_run.remaining_processor_time;
+
+            if (processRunResult)
+            {
+                perror("There was an error running a process.");
+                return;
+            }
         }
         // Else if the highest-priority job queue has anything in it...
         else if (!isEmpty(&userQueueHighPriority))
@@ -496,8 +514,11 @@ int main(int argc, char** argv)
     int latestArrival = 0;
 
     // Get the filename from the command line
-    // char* filename = argv[1];
+#ifdef VSCODE_DEBUG
     char* filename = "sampleInput.txt";
+#else
+    char* filename = argv[1];
+#endif
 
     // Open the file containing processes
     fp = fopen(filename, "r");
@@ -512,6 +533,10 @@ int main(int argc, char** argv)
     // Add all of the processes to the list of processes in sorted order
     // of non-decreasing arrival time.
     populate_process_list(processList, fp, &numProcesses, &latestArrival);
+
+#ifdef EXTENDED_DEBUG
+    print_process_list(processList, numProcesses, latestArrival);
+#endif
 
     // Run the processes in the processList
     runProcesses(processList, numProcesses, latestArrival);
