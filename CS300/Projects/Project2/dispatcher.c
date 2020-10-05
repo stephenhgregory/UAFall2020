@@ -20,27 +20,6 @@ typedef struct process
     int remaining_processor_time;
 } process;
 
-// /**
-//  * Struct representing a linked list of jobDispatchNodes,
-//  * each of which contains a list of processes arriving
-//  * at a particular time.
-//  */
-// typedef struct jobDispatchList
-// {
-//     jobDispatchNode* head;
-// } jobDispatchList;
-
-// /**
-//  * Struct representing a list of jobs/processes arriving 
-//  * at one point in time (arrival time).
-//  */
-// typedef struct jobDispatchNode
-// {
-//     process* processList;
-//     int timestep;
-//     jobDispatchNode* next;
-// } jobDispatchNode;
-
 /**
  * Struct represting a process node in a queue
  */
@@ -105,41 +84,66 @@ void initialize(jobQueue* q)
  */
 int isEmpty(jobQueue* q)
 {
-    return (q->rear == NULL);
+    int result = (q->rear == NULL);
+    return result;
 }
 
 /**
- * Adds a new processNode to the System Queue
+ * Adds a new processNode to a jobQueue
  */
 void enqueue(jobQueue* q, process p)
 {
+    // Create a new node for the queue
     processNode* tmp;
     tmp = (processNode*)malloc(sizeof(processNode));
     tmp->p = p;
     tmp->next = NULL;
+
+    // If the queue is not empty, then add the new node at
+    // the rear of the queue and change rear.
     if (!isEmpty(q))
     {
         q->rear->next = tmp;
         q->rear = tmp;
     }
+    // Else, if the queue is empty, then the new node 
+    // is both the front and the rear of the queue
     else
     {
         q->front = q->rear = tmp;
     }
+
+    // Finally, update the total count of the queue
     q->count++;
 }
 
 /**
- * Deletes the processNode from the front of the SystemQueue,
+ * Deletes the processNode from the front of a jobQueue,
  * and returns a copy of the process in that node
+ * 
+ * NOTE: This function assumes that the queue is NOT empty
  */
 process dequeue(jobQueue* q)
 {
+    // Store the previous front and move front one ahead
     processNode* tmp;
     process returnProcess = q->front->p;
     tmp = q->front;
     q->front = q->front->next;
     q->count--;
+
+    // If the count is 0, set q->front to NULL
+    // TODO: figure out why this is working this way
+    if (q->count == 0)
+        q->front = NULL;
+
+
+    // If front becomes NULL, then change rear to NULL as well
+    if (q->front = NULL)
+        q->rear = NULL;
+
+    // Free the memory of the now chopped-off processNode, and
+    // return the process from that node.
     free(tmp);
     return returnProcess;
 }
@@ -358,6 +362,7 @@ void updateQueues(int timestep, int i, const int processListSize, process* proce
     {
         // Create temporary queue to store processes with the same arrival time
         jobQueue arrivalQueue;
+        initialize(&arrivalQueue);
         int arrivalQueueSize = 0;
         int j = i+1;
 
@@ -408,11 +413,15 @@ void updateQueues(int timestep, int i, const int processListSize, process* proce
  */
 void runProcesses(process* processList, const int processListSize, const int latestArrival)
 {
-    // Create all 4 queues
+    // Create and initialize all 4 queues
     jobQueue systemQueue;
     jobQueue userQueueHighPriority;
     jobQueue userQueueMidPriority;
     jobQueue userQueueLowPriority;
+    initialize(&systemQueue);
+    initialize(&userQueueHighPriority);
+    initialize(&userQueueMidPriority);
+    initialize(&userQueueLowPriority);
 
     int i = 0;
     int timestep = 0;
@@ -503,9 +512,6 @@ int main(int argc, char** argv)
     // Add all of the processes to the list of processes in sorted order
     // of non-decreasing arrival time.
     populate_process_list(processList, fp, &numProcesses, &latestArrival);
-    // populate_master_job_list(masterJobList, processList, &numProcesses, &latestArrival);
-
-    print_process_list(processList, numProcesses, latestArrival);
 
     // Run the processes in the processList
     runProcesses(processList, numProcesses, latestArrival);
