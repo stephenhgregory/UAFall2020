@@ -10,12 +10,12 @@
 #define MAX_PROCESSES 1000
 #define TIME_QUANTUM 1
 
-// // Comment this line of code out when not running from VS Code's debugger
-// #define VSCODE_DEBUG 1
+// Comment this line of code out when not running from VS Code's debugger
+#define VSCODE_DEBUG 1
 
-// // Comment this line of code out when not using extended debugging
-// // (extra print statements)
-// #define EXTENDED_DEBUG 1
+// Comment this line of code out when not using extended debugging
+// (extra print statements)
+#define EXTENDED_DEBUG 1
 
 
 /**
@@ -201,8 +201,9 @@ int startProcess(process* p)
         int stringLength = snprintf(NULL, 0, "%d", p->remaining_processor_time);
         char processorTime[stringLength+1]; 
         int_to_string_on_stack(p->remaining_processor_time, processorTime);
-        char* args[1];
+        char* args[2];
         args[0] = processorTime;
+        args[1] = NULL;
 
         // Replace the current executing program with "./process" to (re)run that process
         execvp("./process", args);
@@ -236,8 +237,9 @@ int restartProcess(process* p)
         int stringLength = snprintf(NULL, 0, "%d", p->remaining_processor_time);
         char processorTime[stringLength+1]; 
         int_to_string_on_stack(p->remaining_processor_time, processorTime);
-        char* args[1];
+        char* args[2];
         args[0] = processorTime;
+        args[1] = NULL;
 
         // Replace the current executing program with "./process" to (re)run that process
         execvp("./process", args);
