@@ -495,6 +495,7 @@ void runProcesses(process* processList, const int processListSize, const int lat
 
             // Run the process
             int result = startProcess(&process_to_run);
+            printf("result = %d\n", result); // TODO: Delete this line
 
             // Wait for one time quantum
             sleep(TIME_QUANTUM);
