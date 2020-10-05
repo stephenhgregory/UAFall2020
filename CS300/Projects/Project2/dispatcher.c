@@ -10,8 +10,8 @@
 #define MAX_PROCESSES 1000
 #define TIME_QUANTUM 1
 
-// // Comment this line of code out when not running from VS Code's debugger
-// #define VSCODE_DEBUG 1
+// Comment this line of code out when not running from VS Code's debugger
+#define VSCODE_DEBUG 1
 
 // // Comment this line of code out when not using extended debugging
 // // (extra print statements)
@@ -76,6 +76,8 @@ void populate_process_list(process* processList, FILE* fp, int* numProcesses, in
 void updateQueuesWithArrivals(int timestep, int* i, const int processListSize, process* processList, jobQueue* systemQueue, jobQueue* userQueueHighPriority, jobQueue* userQueueMidPriority, jobQueue* userQueueLowPriority);
 void print_process_list(process* processList, const int processListSize, const int latestArrival);
 void runProcesses(process* processList, const int processListSize, const int latestArrival);
+void runProcessFromUserQueue(jobQueue* userQueue, jobQueue* nextQueue);
+void runProcessFromSystemQueue(jobQueue* systemQueue);
 
 /**
  * Initializes a jobQueue to NULL pointers and 0
@@ -448,11 +450,11 @@ void runProcessFromSystemQueue(jobQueue* systemQueue)
     // Wait on the process to respond before continuing
     waitpid(process_to_run.pid, &status, WUNTRACED);
 
-    // Exit with an error message if there was a problem
+    // Return (not exit) with an error message if there was a problem
     if (processRunResult)
     {
         perror("There was an error running a process.");
-        exit(1);
+        return;
     }
 }
 
@@ -488,6 +490,7 @@ void runProcessFromUserQueue(jobQueue* userQueue, jobQueue* nextQueue)
     else
     {
         processRunResult = restartProcess(&process_to_run);
+
     }
 
     // Wait for one time quantum
@@ -520,11 +523,11 @@ void runProcessFromUserQueue(jobQueue* userQueue, jobQueue* nextQueue)
         enqueue(nextQueue, process_to_run);
     }
 
-    // Return with an error message if there was a problem
+    // Return (not exit) with an error message if there was a problem
     if (processRunResult)
     {
         perror("There was an error running a process.");
-        exit(1);
+        return;
     }
 }
 
@@ -598,7 +601,7 @@ void runProcesses(process* processList, const int processListSize, const int lat
         else
         {
             // If the entire processList has been exhausted, break from the while loop
-            if (i >= processListSize)
+            if (i <= processListSize)
             {
                 printf("We should be done now. Bye! \n");
                 break;
