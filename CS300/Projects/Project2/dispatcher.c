@@ -77,7 +77,7 @@ void updateQueuesWithArrivals(int timestep, int* i, const int processListSize, p
 void print_process_list(process* processList, const int processListSize, const int latestArrival);
 void runProcesses(process* processList, const int processListSize, const int latestArrival);
 void runProcessFromUserQueue(jobQueue* userQueue, jobQueue* nextQueue);
-void runProcessFromSystemQueue(jobQueue* systemQueue);
+int runProcessFromSystemQueue(jobQueue* systemQueue);
 
 /**
  * Initializes a jobQueue to NULL pointers and 0
@@ -349,7 +349,6 @@ void updateQueuesWithArrivals(int timestep, int* i, const int processListSize, p
 {
     // Create temporary queue to store processes with the same arrival time
     jobQueue arrivalQueue;
-    initialize(&arrivalQueue);
 
     // Initialize the size of the arrivalQueue (the queue of processes 
     // at this arrival time)
@@ -359,10 +358,17 @@ void updateQueuesWithArrivals(int timestep, int* i, const int processListSize, p
     // picked out yet in the processList
     int j = *i;
 
+    // If we've already exhausted the list of processees, just return
+    if (*i >= processListSize)
+        return;
+
     // If there is a process(s) at OR BEFORE this arrival time, place it (them) 
     // in the proper queues
     if (timestep >= processList[*i].arrival_time)
     {
+        // Initialize the arrivalQueue
+        initialize(&arrivalQueue);
+
         // Update j to be the index of the NEXT process, because we just
         // picked one out in the above processList matching this timestep  
         j++;
@@ -420,12 +426,13 @@ void updateQueuesWithArrivals(int timestep, int* i, const int processListSize, p
  * 2. Update the timestep by the amount of CPU time that was just used.
  * 3. Remove that process from the system Queue.
  */
-void runProcessFromSystemQueue(jobQueue* systemQueue)
+int runProcessFromSystemQueue(jobQueue* systemQueue)
 {
     // Declare variables to store result of starting/restarting a process,
     // as well as the status from waitpid()
     int processRunResult;
     int status;
+    int time_to_run;
 
     // Get the process to run from the front of the system queue
     process process_to_run = dequeue(systemQueue);
@@ -444,6 +451,9 @@ void runProcessFromSystemQueue(jobQueue* systemQueue)
     // Wait for the full amount of time required by the process
     sleep(process_to_run.remaining_processor_time);
 
+    // Update the time it took to run this process
+    time_to_run = process_to_run.remaining_processor_time;
+
     // Terminate the process
     processRunResult = terminateProcess(&process_to_run);
 
@@ -454,8 +464,10 @@ void runProcessFromSystemQueue(jobQueue* systemQueue)
     if (processRunResult)
     {
         perror("There was an error running a process.");
-        return;
+        return 0;
     }
+
+    return time_to_run;
 }
 
 
@@ -560,8 +572,9 @@ void runProcesses(process* processList, const int processListSize, const int lat
         if (!isEmpty(&systemQueue))
         {
             // Run the process at the front of the system queue until it's finished
-            runProcessFromSystemQueue(&systemQueue);
+            int time_to_run = runProcessFromSystemQueue(&systemQueue);
 
+            timestep += time_to_run;
             continue;
         }
         // Else if the highest-priority job queue has anything in it...
@@ -601,9 +614,9 @@ void runProcesses(process* processList, const int processListSize, const int lat
         else
         {
             // If the entire processList has been exhausted, break from the while loop
-            if (i <= processListSize)
+            if (i >= processListSize)
             {
-                printf("We should be done now. Bye! \n");
+                printf("All processes in the process list completed.\n");
                 break;
             }
             // Otherwise...
