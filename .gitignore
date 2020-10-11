@@ -2,7 +2,7 @@
 IndyAutonomous/TrackGrid
 
 # Ignore Desktop Services Store (from macOS)
-.DS_Store
+*.DS_Store
 
 # Ignore IDE/editor files/folders
-.vs
+*.vs
