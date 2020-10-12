@@ -111,9 +111,9 @@ int main(int argc, char *argv[])
     clock_t starttick, stoptick;
     sigset_t mask;
     FILE * output = DEFAULT_OP;
- 
+    
     colour = colours[pid % N_COLOUR]; // select colour for this process
-   
+
     if (argc > 2 || (argc == 2 && !isdigit((int)argv[1][0])))
         PrintUsage(argv[0]);  
    

@@ -203,12 +203,13 @@ int startProcess(process* p)
         int stringLength = snprintf(NULL, 0, "%d", p->remaining_processor_time);
         char processorTime[stringLength+1]; 
         int_to_string_on_stack(p->remaining_processor_time, processorTime);
-        char* args[2];
-        args[0] = processorTime;
-        args[1] = NULL;
+        char* args[3];
+        args[0] = "./process";
+        args[1] = processorTime;
+        args[2] = NULL;
 
         // Replace the current executing program with "./process" to run that process
-        if (execvp("./process", args))
+        if (execvp(args[0], args))
         {
             printf("Error calling execvp().\n");
             exit(1);
@@ -455,7 +456,7 @@ int runProcessFromSystemQueue(jobQueue* systemQueue)
     time_to_run = process_to_run.remaining_processor_time;
 
     // Terminate the process
-    processRunResult = terminateProcess(&process_to_run);
+    // processRunResult = terminateProcess(&process_to_run);
 
     // Wait on the process to respond before continuing
     waitpid(process_to_run.pid, &status, WUNTRACED);
