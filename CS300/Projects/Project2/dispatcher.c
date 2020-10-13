@@ -456,7 +456,7 @@ int runProcessFromSystemQueue(jobQueue* systemQueue)
     time_to_run = process_to_run.remaining_processor_time;
 
     // Terminate the process
-    // processRunResult = terminateProcess(&process_to_run);
+    processRunResult = terminateProcess(&process_to_run);
 
     // Wait on the process to respond before continuing
     waitpid(process_to_run.pid, &status, WUNTRACED);
