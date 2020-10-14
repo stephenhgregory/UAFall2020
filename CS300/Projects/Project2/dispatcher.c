@@ -1,3 +1,5 @@
+/* Gregory.Stephen */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -651,7 +653,6 @@ int main(int argc, char** argv)
 
     // Open the file containing processes
     fp = fopen(filename, "r");
-
     // Exit if the file could not be opened
     if (fp == NULL)
     {
@@ -672,6 +673,6 @@ int main(int argc, char** argv)
 
     // Close the file handler
     fclose(fp);
-    
+
     return 0;
 }
