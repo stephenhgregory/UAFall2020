@@ -1,3 +1,5 @@
+/* Gregory.Stephen */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -616,10 +618,7 @@ void runProcesses(process* processList, const int processListSize, const int lat
         {
             // If the entire processList has been exhausted, break from the while loop
             if (i >= processListSize)
-            {
-                printf("All processes in the process list completed.\n");
                 break;
-            }
             // Otherwise...
             else
             {
@@ -636,9 +635,13 @@ void runProcesses(process* processList, const int processListSize, const int lat
 
 int main(int argc, char** argv)
 {
+    // Initialize file handler
     FILE* fp;
+    // Initialize list of incoming processes
     process processList[MAX_PROCESSES];
+    // Initialize int to hold total number of processes to run
     int numProcesses;
+    // Initialize int to hold the latest arrival time
     int latestArrival = 0;
 
     // Get the filename from the command line
@@ -650,7 +653,6 @@ int main(int argc, char** argv)
 
     // Open the file containing processes
     fp = fopen(filename, "r");
-
     // Exit if the file could not be opened
     if (fp == NULL)
     {
@@ -669,7 +671,8 @@ int main(int argc, char** argv)
     // Run the processes in the processList
     runProcesses(processList, numProcesses, latestArrival);
 
-    printf("Goodbye, world!\n");
+    // Close the file handler
     fclose(fp);
+
     return 0;
 }
