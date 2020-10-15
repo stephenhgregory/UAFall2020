@@ -1,5 +1,6 @@
 # Ignore IndyAutonomous git repositories
 IndyAutonomous/TrackGrid
+IndyAutonomous/MyTrackGrid
 
 # Ignore Desktop Services Store (from macOS)
 *.DS_Store
