@@ -24,8 +24,19 @@ typedef struct pageTableEntry
     int empty;
 } pageTableEntry;
 
-void simulateVirtualMemory(uint16_t* addressList, int addressListLength, pageTableEntry* pageTable, pageTableEntry* TLB, const char* backingStore, char* physicalMemory, int* numAddressReferences, int* numPageFaults, int* numTLBHits);
-uint8_t checkPageTable(pageTableEntry* pageTable, const char* backingStore, char* physicalMemory, const uint8_t pageNumber, int* nextFreeFrame, int* numPageFaults);
+/**
+ * Single entry in a TLB (Transltion Lookaside Buffer)
+ */
+typedef struct TLBEntry
+{
+    uint8_t pageNumber;
+    uint8_t frameNumber;
+    int empty;
+} TLBEntry;
+
+void simulateVirtualMemory(uint16_t* addressList, int addressListLength, pageTableEntry* pageTable, TLBEntry* TLB, const char* backingStore, char* physicalMemory, int* numAddressReferences, int* numPageFaults, int* numTLBHits);
+void checkPageTable(pageTableEntry* pageTable, const char* backingStore, char* physicalMemory, const uint8_t pageNumber, int* nextFreeFrame, int* numPageFaults, uint8_t* frameNumber);
+int checkTLB(TLBEntry* TLB, const uint8_t pageNumber, uint8_t* frameNumber, int* numTLBHits);
 void populateAddressList(uint16_t* addressList, FILE* fp, int* addressListLength);
 double approxRollingAverage(double avg, double new_sample);
 uint16_t getLower16Bits(int value);
@@ -34,6 +45,7 @@ uint8_t extractPageNumber(uint16_t virtualAddress);
 uint8_t extractPageOffset(uint16_t virtualAddress);
 void printAddressList(uint16_t* addressList, int size);
 void initializePageTable(pageTableEntry* pageTable, int size);
+void initializeTLB(TLBEntry* TLB, int size);
 void printPageInformation(uint16_t virtualAddress, uint16_t physicalAddress, signed int value);
 void printStatistics(const int numAddressReferences, const int numPageFaults, const int numTLBHits);
 void readPageFromBackingStore(uint8_t pageNumber, const char* backingStore, signed char* charBuffer);
@@ -132,57 +144,62 @@ void initializePageTable(pageTableEntry* pageTable, int size)
 }
 
 /**
- * Simulates virtual memory operation
+ * Initializes the TLB with pageNumber and frameNumber set to 0 and "empty" set to 1 (true)
  */
-void simulateVirtualMemory(uint16_t* addressList, int addressListLength, pageTableEntry* pageTable, pageTableEntry* TLB, const char* backingStore, char* physicalMemory, int* numAddressReferences, int* numPageFaults, int* numTLBHits)
+void initializeTLB(TLBEntry* TLB, int size)
 {
     int i;
-    int nextFreeFrame;
+    for (i = 0; i < size; i++)
+    {
+        TLB[i].pageNumber = 0;
+        TLB[i].frameNumber = 0;
+        TLB[i].empty = 1;
+    }
+}
+
+/**
+ * Checks if a page number is in the TLB, and modifies the passed in frameNumber
+ * if it is found in the TLB
+ * 
+ * Returns 1 if Page Number is found in the TLB
+ */
+int checkTLB(TLBEntry* TLB, const uint8_t pageNumber, uint8_t* frameNumber, int* numTLBHits)
+{
+    // TODO: Possibly parallelize the following loop
+    int i;
+    for (i = 0; i < TLB_SIZE; i++)
+    {
+        if ((!TLB[i].empty) && (TLB[i].pageNumber == pageNumber))
+        {
+            *frameNumber = TLB[i].frameNumber;
+            (*numTLBHits)++;
+            return 1;
+        } 
+    }
+    return 0;
+}
+
+/**
+ * Simulates virtual memory operation
+ */
+void simulateVirtualMemory(uint16_t* addressList, int addressListLength, pageTableEntry* pageTable, TLBEntry* TLB, const char* backingStore, char* physicalMemory, int* numAddressReferences, int* numPageFaults, int* numTLBHits)
+{
+    int i;
+    int nextFreeFrame = 0;
     for (i = 0; i < addressListLength; i++)
     {
         uint8_t pageNumber = extractPageNumber(addressList[i]);
         uint8_t pageOffset = extractPageOffset(addressList[i]);
         uint8_t frameNumber;
 
-        // TODO: Check if page number is in TLB
-        if (0)
-        {
-            
-        }
-
-        else 
+        // Check if page number is in the TLB
+        if (!checkTLB(TLB, pageNumber, &frameNumber, numTLBHits))
         {
             // Get the frame number from the page table
-            frameNumber = checkPageTable(pageTable, backingStore, physicalMemory, pageNumber, &nextFreeFrame, numPageFaults);
+            checkPageTable(pageTable, backingStore, physicalMemory, pageNumber, &nextFreeFrame, numPageFaults, &frameNumber);
 
             // TODO: Add entry 
         }
-
-        // // If we have a page fault...
-        // if (pageTable[pageNumber].empty == 1)
-        // {
-        //     // Get the page from the backing store
-        //     signed char page[PAGE_TABLE_SIZE+1];
-        //     readPageFromBackingStore(pageNumber, backingStore, page);
-
-        //     // Store the page in the next free frame
-        //     int i;
-        //     int j = 0;
-        //     for (i = nextFreeFrame * FRAME_SIZE; i < (nextFreeFrame * FRAME_SIZE) + FRAME_SIZE; i++)
-        //     {
-        //         physicalMemory[i] = page[j];
-        //         j++;
-        //     }
-
-        //     // Update pageTable, nextFreeFrame, and numPageFaults
-        //     pageTable[pageNumber].address = nextFreeFrame;
-        //     pageTable[pageNumber].empty = 0;
-        //     nextFreeFrame++;
-        //     (*numPageFaults)++;
-        // }
-
-        // // Get the frame number from the page table
-        // u_int8_t frameNumber = pageTable[pageNumber].address;
 
         // Combine MSB (frame number) and LSB (offset) to get physicalAddress
         uint16_t physicalAddress = combinePageNumberAndOffset(frameNumber, pageOffset);
@@ -204,7 +221,7 @@ void simulateVirtualMemory(uint16_t* addressList, int addressListLength, pageTab
  * 
  * This is done after any TLB miss.
  */
-uint8_t checkPageTable(pageTableEntry* pageTable, const char* backingStore, char* physicalMemory, const uint8_t pageNumber, int* nextFreeFrame, int* numPageFaults)
+void checkPageTable(pageTableEntry* pageTable, const char* backingStore, char* physicalMemory, const uint8_t pageNumber, int* nextFreeFrame, int* numPageFaults, uint8_t* frameNumber)
 {
     // If we have a page fault...
     if (pageTable[pageNumber].empty == 1)
@@ -229,8 +246,8 @@ uint8_t checkPageTable(pageTableEntry* pageTable, const char* backingStore, char
         (*numPageFaults)++;
     }
 
-    // Get and return the frame number from the page table
-    return pageTable[pageNumber].address;
+    // Set the frame number equal to the frame number from the page table
+    *frameNumber = pageTable[pageNumber].address;
 }
 
 /**
@@ -283,8 +300,8 @@ int main(int argc, char** argv)
     int addressListLength = 0;                                  // Initialize length of address list
     pageTableEntry pageTable[PAGE_TABLE_SIZE];                  // Initialize page table
     initializePageTable(pageTable, PAGE_TABLE_SIZE);            // ...
-    pageTableEntry TLB[TLB_SIZE];                               // Initialize TLB
-    initializePageTable(TLB, TLB_SIZE);                         // ...
+    TLBEntry TLB[TLB_SIZE];                                     // Initialize TLB
+    initializeTLB(TLB, TLB_SIZE);                               // ...
     static const char backingStore[] = "./BACKING_STORE.bin";   // Initialize path to backing store
     char physicalMemory[PHYSICAL_MEMORY_SIZE];                  // Initialize (simulated) physical memory
     int numAddressReferences = 0;                               // Initialize statistics
@@ -293,7 +310,7 @@ int main(int argc, char** argv)
 
     // Get the filename from the command line
 #ifdef VSCODE_DEBUG
-    char* filename = "short_addresses.txt";
+    char* filename = "addresses.txt";
 #else
     char* filename = argv[1];
 #endif
