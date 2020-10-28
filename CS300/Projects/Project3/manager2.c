@@ -10,18 +10,22 @@
 #define FRAME_SIZE 256
 #define PAGE_TABLE_SIZE 256
 #define TLB_SIZE 16
-#define PHYSICAL_MEMORY_SIZE 65536
+#define PHYSICAL_MEMORY_SIZE 32768
 
 // // Comment this line of code out when not running from VS Code's debugger
 // #define VSCODE_DEBUG 1
 
 /**
  * Single entry in a page table
+ * 
+ * Keeps track of time since entry into page table
+ * for LRU replacement.
  */
 typedef struct pageTableEntry
 {
     uint8_t address;
     int empty;
+    int lastUpdate;
 } pageTableEntry;
 
 /**
@@ -34,8 +38,11 @@ typedef struct TLBEntry
     int empty;
 } TLBEntry;
 
-void simulateVirtualMemory(uint16_t* addressList, int addressListLength, pageTableEntry* pageTable, TLBEntry* TLB, const char* backingStore, char* physicalMemory, int* numAddressReferences, int* numPageFaults, int* numTLBHits, int* tlbIndex);
-void checkPageTable(pageTableEntry* pageTable, const char* backingStore, char* physicalMemory, const uint8_t pageNumber, int* nextFreeFrame, int* numPageFaults, uint8_t* frameNumber);
+void simulateVirtualMemory(uint16_t* addressList, int addressListLength, pageTableEntry* pageTable, TLBEntry* TLB, const char* backingStore, char* physicalMemory, int* freeFrames, const int freeFramesSize, int* numAddressReferences, int* numPageFaults, int* numTLBHits, int* tlbIndex);
+void checkPageTable(pageTableEntry* pageTable, const char* backingStore, char* physicalMemory, const uint8_t pageNumber, int* freeFrames, const int freeFramesSize, int* numPageFaults, uint8_t* frameNumber, const int counter);
+void storePageInNextFreeFrame(pageTableEntry* pageTable, const uint8_t pageNumber, char* physicalMemory, signed char* page, int* freeFrames, const int freeFramesSize, const int counter);
+void storePage(char* physicalMemory, signed char* page, int index);
+uint8_t findVictimFrame(pageTableEntry* pageTable);
 int checkTLB(TLBEntry* TLB, const uint8_t pageNumber, uint8_t* frameNumber, int* numTLBHits);
 void addEntryToTLB(TLBEntry* TLB, uint8_t pageNumber, uint8_t frameNumber, int* tlbIndex);
 void populateAddressList(uint16_t* addressList, FILE* fp, int* addressListLength);
@@ -47,6 +54,7 @@ uint8_t extractPageOffset(uint16_t virtualAddress);
 void printAddressList(uint16_t* addressList, int size);
 void initializePageTable(pageTableEntry* pageTable, int size);
 void initializeTLB(TLBEntry* TLB, int size);
+void initializeFreeFramesList(int* freeFramesList, int size);
 void printPageInformation(uint16_t virtualAddress, uint16_t physicalAddress, signed int value);
 void printStatistics(const int numAddressReferences, const int numPageFaults, const int numTLBHits);
 void readPageFromBackingStore(uint8_t pageNumber, const char* backingStore, signed char* charBuffer);
@@ -141,6 +149,7 @@ void initializePageTable(pageTableEntry* pageTable, int size)
     {
         pageTable[i].address = 0;
         pageTable[i].empty = 1;
+        pageTable[i].lastUpdate = -1;
     }
 }
 
@@ -155,6 +164,18 @@ void initializeTLB(TLBEntry* TLB, int size)
         TLB[i].pageNumber = 0;
         TLB[i].frameNumber = 0;
         TLB[i].empty = 1;
+    }
+}
+
+/**
+ * Initializes the free frames list with each value set to 1, which means "free"
+ */
+void initializeFreeFramesList(int* freeFramesList, int size)
+{
+    int i;
+    for (i = 0; i < size; i++)
+    {
+        freeFramesList[i] = 1;
     }
 }
 
@@ -198,10 +219,9 @@ void addEntryToTLB(TLBEntry* TLB, uint8_t pageNumber, uint8_t frameNumber, int* 
 /**
  * Simulates virtual memory operation
  */
-void simulateVirtualMemory(uint16_t* addressList, int addressListLength, pageTableEntry* pageTable, TLBEntry* TLB, const char* backingStore, char* physicalMemory, int* numAddressReferences, int* numPageFaults, int* numTLBHits, int* tlbIndex)
+void simulateVirtualMemory(uint16_t* addressList, int addressListLength, pageTableEntry* pageTable, TLBEntry* TLB, const char* backingStore, char* physicalMemory, int* freeFrames, const int freeFramesSize, int* numAddressReferences, int* numPageFaults, int* numTLBHits, int* tlbIndex)
 {
     int i;
-    int nextFreeFrame = 0;
     for (i = 0; i < addressListLength; i++)
     {
         uint8_t pageNumber = extractPageNumber(addressList[i]);
@@ -212,7 +232,7 @@ void simulateVirtualMemory(uint16_t* addressList, int addressListLength, pageTab
         if (!checkTLB(TLB, pageNumber, &frameNumber, numTLBHits))
         {
             // Get the frame number from the page table
-            checkPageTable(pageTable, backingStore, physicalMemory, pageNumber, &nextFreeFrame, numPageFaults, &frameNumber);
+            checkPageTable(pageTable, backingStore, physicalMemory, pageNumber, freeFrames, freeFramesSize, numPageFaults, &frameNumber, i);
 
             // Add entry to TLB
             addEntryToTLB(TLB, pageNumber, frameNumber, tlbIndex);
@@ -238,7 +258,7 @@ void simulateVirtualMemory(uint16_t* addressList, int addressListLength, pageTab
  * 
  * This is done after any TLB miss.
  */
-void checkPageTable(pageTableEntry* pageTable, const char* backingStore, char* physicalMemory, const uint8_t pageNumber, int* nextFreeFrame, int* numPageFaults, uint8_t* frameNumber)
+void checkPageTable(pageTableEntry* pageTable, const char* backingStore, char* physicalMemory, const uint8_t pageNumber, int* freeFrames, const int freeFramesSize, int* numPageFaults, uint8_t* frameNumber, const int counter)
 {
     // If we have a page fault...
     if (pageTable[pageNumber].empty == 1)
@@ -248,23 +268,107 @@ void checkPageTable(pageTableEntry* pageTable, const char* backingStore, char* p
         readPageFromBackingStore(pageNumber, backingStore, page);
 
         // Store the page in the next free frame
-        int i;
-        int j = 0;
-        for (i = *nextFreeFrame * FRAME_SIZE; i < (*nextFreeFrame * FRAME_SIZE) + FRAME_SIZE; i++)
-        {
-            physicalMemory[i] = page[j];
-            j++;
-        }
+        storePageInNextFreeFrame(pageTable, pageNumber, physicalMemory, page, freeFrames, freeFramesSize, counter);
 
-        // Update pageTable, nextFreeFrame, and numPageFaults
-        pageTable[pageNumber].address = *nextFreeFrame;
-        pageTable[pageNumber].empty = 0;
-        (*nextFreeFrame)++;
+        // int i;
+        // int j = 0;
+        // for (i = *nextFreeFrame * FRAME_SIZE; i < (*nextFreeFrame * FRAME_SIZE) + FRAME_SIZE; i++)
+        // {
+        //     physicalMemory[i] = page[j];
+        //     j++;
+        // }
+
+        // // Update pageTable, nextFreeFrame, and numPageFaults
+        // pageTable[pageNumber].address = *nextFreeFrame;
+        // pageTable[pageNumber].empty = 0;
+        // (*nextFreeFrame)++;
+
         (*numPageFaults)++;
     }
 
     // Set the frame number equal to the frame number from the page table
     *frameNumber = pageTable[pageNumber].address;
+}
+
+/**
+ * Stores a page in the next free frame in physical memory
+ */
+void storePageInNextFreeFrame(pageTableEntry* pageTable, const uint8_t pageNumber, char* physicalMemory, signed char* page, int* freeFrames, const int freeFramesSize, const int counter)
+{
+    // Loop over the entire freeFrames list to try and find a free frame
+    int i;
+    for (i = 0; i < freeFramesSize; i++)
+    {
+        // If you've found a free frame...
+        if (freeFrames[i])
+        {
+            // Store the page at frame "i"
+            storePage(physicalMemory, page, i);
+
+            // Update the freeFramesList
+            freeFrames[i] = 0;
+
+            // Update the pageTable
+            pageTable[pageNumber].address = i;
+            pageTable[pageNumber].empty = 0;
+            pageTable[pageNumber].lastUpdate = counter;
+
+            return;
+        }
+    }
+
+    // If there are no free frames, find victimFrame to be replaced
+    uint8_t victimFrameAddress = findVictimFrame(pageTable);
+
+    // Store the page at that victim frame address
+    storePage(physicalMemory, page, victimFrameAddress);
+
+    // Update the freeFramesList
+    freeFrames[victimFrameAddress] = 0;
+
+    // Update the pageTable
+    pageTable[pageNumber].address = i;
+    pageTable[pageNumber].empty = 0;
+    pageTable[pageNumber].lastUpdate = counter;
+}
+
+/**
+ * Finds a victim page to be replaced 
+ * with new page from backing store
+ */
+uint8_t findVictimFrame(pageTableEntry* pageTable)
+{
+    int minimumLastUpdateTime = 0;
+    int minimumLastUpdateIndex = -1;
+    int i;
+    // Loop through the page table, finding the lowest "last update" time
+    for (i = 0; i < PAGE_TABLE_SIZE; i++)
+    {
+        if (pageTable[i].lastUpdate < minimumLastUpdateTime)
+        {
+            minimumLastUpdateTime = pageTable[i].lastUpdate;
+            minimumLastUpdateIndex = i;
+        }
+    }
+
+    // Return the address of the victim frame
+    return pageTable[minimumLastUpdateIndex].address;
+} 
+
+/**
+ * Stores a page into a frame of memory
+ */
+void storePage(char* physicalMemory, signed char* page, int index)
+{
+    int firstAddress = index * FRAME_SIZE;
+    int lastAddress = firstAddress + FRAME_SIZE;
+    int i;
+    int j = 0;
+    for (i = firstAddress; i < lastAddress; i++)
+    {
+        physicalMemory[i] = page[j];
+        j++;
+    }
 }
 
 /**
@@ -277,6 +381,9 @@ void printPageInformation(uint16_t virtualAddress, uint16_t physicalAddress, sig
     printf("Virtual address: %d Physical address: %d Value: %d\n", virtualAddress, physicalAddress, value);
 }
 
+/**
+ * Prints aggregatea statistics about virtual memory operation
+ */
 void printStatistics(const int numAddressReferences, const int numPageFaults, const int numTLBHits)
 {
     double pageFaultRate = (double)numPageFaults / numAddressReferences;
@@ -325,6 +432,9 @@ int main(int argc, char** argv)
     int numAddressReferences = 0;                               // Initialize statistics
     int numPageFaults = 0;                                      // ...
     int numTLBHits = 0;                                         // ...
+    int numFrames = PHYSICAL_MEMORY_SIZE / PAGE_TABLE_SIZE;     // Initialize free frames list
+    int freeFrames[numFrames];                                  // ...
+    initializeFreeFramesList(freeFrames, numFrames);            // ...
 
     // Get the filename from the command line
 #ifdef VSCODE_DEBUG
@@ -346,7 +456,7 @@ int main(int argc, char** argv)
     populateAddressList(addressList, fp, &addressListLength);
 
     // Simulate the virtual memory operation
-    simulateVirtualMemory(addressList, addressListLength, pageTable, TLB, backingStore, physicalMemory, &numAddressReferences, &numPageFaults, &numTLBHits, &tlbIndex);
+    simulateVirtualMemory(addressList, addressListLength, pageTable, TLB, backingStore, physicalMemory, freeFrames, numFrames, &numAddressReferences, &numPageFaults, &numTLBHits, &tlbIndex);
 
     printStatistics(numAddressReferences, numPageFaults, numTLBHits);
 
