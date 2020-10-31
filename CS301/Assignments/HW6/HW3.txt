@@ -1,0 +1,18 @@
+You will use the NYC database you create in HW#5 for these queries.  Do NOT include the _id unless specifically requested by the query.   Use pretty() as much as possible.
+
+1. Display the number of documents in the collection.
+2. Display all fields (including _id) for documents that have an EventZipCode of 11201. Print using pretty().
+3. Define a cursor using 2. and use the cursor method count to return the number of documents in the cursor.
+4. Display the _id, AgencyName and AgencyDivision for two documents.
+5. or all events that have a RequestID > 20151027500 and have an AgencyDivision of “Traffic”, display their RequestID. 
+6. Display the EventDate for the events which occur in “Long Island City” or “Key Gardens”, and sort in ascending order on EventDate.  Write using the $or operator.
+7. Same as 6. but remove those events that have no EventDate.
+8. Print the _id, StartDate and ContractAmount for the document with the maximum ContractAmount.  Do not use pipeline aggregation. Instead, you can do with using sort and one other operator.
+9. For all events costing at least 1 million dollars that have the AgencyName of “Taxi and Limousine Commission”, display their RequestID, VendorName and ShortTitle.  Write using find().
+10. Same as 9., but rewrite using pipeline aggregation (see the slides from class).
+11. Using pipeline aggregation, group the documents by TypeOfNoticeDescription to find the sum of the ContractAmount per TypeOfNoticeDescription.  Print each TypeOfNoticeDescription and the sum.
+12. Same as 11., but only chose those documents with a ContractAmount greater than 0, and sort in decreasing order of Contract Amount.
+13. Create a text index to search the Printout1 and name the index “text” field.     https://docs.mongodb.com/manual/text-search  Count the number of documents whose overview contains the word "EMPLOYEE"
+14. Using the index you create in 13, count the number of documents whose overview contains the phrase “EMPLOYEE NAME" (not the exact string).  
+15. The same as 14., but use the exact string “EMPLOYEE NAME” 
+Extra credit:  Can you rename the grouping attribute TypeOfNoticeDescription in 12. from _id to Description?
