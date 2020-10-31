@@ -1,0 +1,54 @@
+You will use the NYC database you create in HW#5 for these queries.  Do NOT include the _id unless specifically requested by the query.   Use pretty() as much as possible.
+
+// 1. Display the number of documents in the collection.
+db.NYC.find().count()
+
+// 2. Display all fields (including _id) for documents that have an EventZipCode of 11201. Print using pretty().
+db.NYC.find({ EventZipCode : 11201 }).pretty()
+
+// 3. Define a cursor using 2. and use the cursor method count to return the number of documents in the cursor.
+var c = db.NYC.find({ EventZipCode : 11201 }).pretty()
+c.count()
+
+// 4. Display the _id, AgencyName and AgencyDivision for two documents.
+db.NYC.find({}, {_id: 1, AgencyName: 1, AgencyDivision: 1}).limit(2).pretty()
+
+// 5. For all events that have a RequestID > 20151027500 and have an AgencyDivision of “Traffic”, display their RequestID. 
+db.NYC.find({$and: [{RequestID: {$gt: 20151027500}}, {AgencyDivision: "Traffic"}]}, {_id: 0, RequestID: 1}).pretty()
+
+// 6. Display the EventDate for the events which occur in “Long Island City” or “Key Gardens”, and sort in ascending order on EventDate.  Write using the $or operator.
+db.NYC.find({$or: [{EventCity: "Long Island City"}, {EventCity: "Key Gardens"}]}, {_id: 0, EventDate: 1}).sort({EventDate:1}).pretty()
+
+// 7. Same as 6. but remove those events that have no EventDate.
+db.NYC.find({$or: [{EventCity: "Long Island City"}, {EventCity: "Key Gardens"}], EventDate: {$exists: true, $ne: null}}, {_id: 0, EventDate: 1}).sort({EventDate:1}).pretty()
+
+// 8. Print the _id, StartDate and ContractAmount for the document with the maximum ContractAmount.  Do not use pipeline aggregation. Instead, you can do with using sort and one other operator.
+db.NYC.find({}, {_id: 1, StartDate: 1, ContractAmount: 1}).sort({ContractAmount: -1}).limit(1).pretty()
+
+// 9. For all events costing at least 1 million dollars that have the AgencyName of “Taxi and Limousine Commission”, display their RequestID, VendorName and ShortTitle.  Write using find().
+db.NYC.find({ContractAmount: {$gte: 1000000}, AgencyName: "Taxi and Limousine Commission"}, {_id: 0, RequestID: 1, VendorName: 1, ShortTitle: 1}).pretty()
+
+// 10. Same as 9., but rewrite using pipeline aggregation (see the slides from class).
+db.NYC.aggregate({$match: {ContractAmount: {$gte: 1000000}, AgencyName: "Taxi and Limousine Commission"}}, {$project: {_id: 0, RequestID: 1, VendorName: 1, ShortTitle: 1}}).pretty()
+
+// 11. Using pipeline aggregation, group the documents by TypeOfNoticeDescription to find the sum of the ContractAmount per TypeOfNoticeDescription.  Print each TypeOfNoticeDescription and the sum.
+db.NYC.aggregate({$group: {_id: "$TypeOfNoticeDescription", total: {$sum: "$ContractAmount"}}}).pretty()
+
+// 12. Same as 11., but only chose those documents with a ContractAmount greater than 0, and sort in decreasing order of Contract Amount.
+db.NYC.aggregate({$match: {ContractAmount: {$gt: 0}}}, {$group: {_id: "$TypeOfNoticeDescription", total: {$sum: "$ContractAmount"}}}, {$sort: {ContractAmount: -1}}).pretty()
+
+// 13. Create a text index to search the Printout1 and name the index “text” field.     https://docs.mongodb.com/manual/text-search  Count the number of documents whose overview contains the word "EMPLOYEE"
+db.NYC.createIndex( { Printout1: "text" }, { name: "text" } )
+db.NYC.find( { $text: {  $search: "EMPLOYEE" } } ).count()
+// Result = 274
+
+// 14. Using the index you create in 13, count the number of documents whose overview contains the phrase “EMPLOYEE NAME" (not the exact string).  
+db.NYC.find( { $text: {  $search: "EMPLOYEE NAME" } } ).count()
+// Result = 2311
+
+// 15. The same as 14., but use the exact string “EMPLOYEE NAME” 
+db.NYC.find( { $text: {  $search: "\"EMPLOYEE NAME\"" } } ).count()
+// Result = 1
+
+// Extra credit:  Can you rename the grouping attribute TypeOfNoticeDescription in 12. from _id to Description?
+db.NYC.aggregate({$match: {ContractAmount: {$gt: 0}}}, {$group: {_id: "$TypeOfNoticeDescription", total: {$sum: "$ContractAmount"}}}, {$project: { _id: 0, TypeOfNoticeDescription: "$_id" , total: 1 } }, {$sort: {ContractAmount: -1}}).pretty()
