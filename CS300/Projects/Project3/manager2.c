@@ -14,8 +14,8 @@
 #define PHYSICAL_MEMORY_SIZE 32768
 // #define PHYSICAL_MEMORY_SIZE 65536
 
-// Comment this line of code out when not running from VS Code's debugger
-#define VSCODE_DEBUG 1
+// // Comment this line of code out when not running from VS Code's debugger
+// #define VSCODE_DEBUG 1
 
 /**
  * Single entry in a page table
