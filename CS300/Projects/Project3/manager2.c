@@ -11,9 +11,10 @@
 #define PAGE_TABLE_SIZE 256
 #define TLB_SIZE 16
 #define PHYSICAL_MEMORY_SIZE 32768
+// #define PHYSICAL_MEMORY_SIZE 65536
 
-// // Comment this line of code out when not running from VS Code's debugger
-// #define VSCODE_DEBUG 1
+// Comment this line of code out when not running from VS Code's debugger
+#define VSCODE_DEBUG 1
 
 /**
  * Single entry in a page table
@@ -25,7 +26,7 @@ typedef struct pageTableEntry
 {
     uint8_t address;
     int empty;
-    int lastUpdate;
+    // int lastUpdate;
 } pageTableEntry;
 
 /**
@@ -38,13 +39,23 @@ typedef struct TLBEntry
     int empty;
 } TLBEntry;
 
-void simulateVirtualMemory(uint16_t* addressList, int addressListLength, pageTableEntry* pageTable, TLBEntry* TLB, const char* backingStore, char* physicalMemory, int* freeFrames, const int freeFramesSize, int* numAddressReferences, int* numPageFaults, int* numTLBHits, int* tlbIndex);
-void checkPageTable(pageTableEntry* pageTable, const char* backingStore, char* physicalMemory, const uint8_t pageNumber, int* freeFrames, const int freeFramesSize, int* numPageFaults, uint8_t* frameNumber, const int counter);
-void storePageInNextFreeFrame(pageTableEntry* pageTable, const uint8_t pageNumber, char* physicalMemory, signed char* page, int* freeFrames, const int freeFramesSize, const int counter);
+/**
+ * Single frame in memory
+ */
+typedef struct pageFrame
+{
+    int free;
+    int lastUpdate;
+} pageFrame;
+
+void simulateVirtualMemory(uint16_t* addressList, int addressListLength, pageTableEntry* pageTable, TLBEntry* TLB, const char* backingStore, char* physicalMemory, pageFrame* freeFrames, const int freeFramesSize, int* numAddressReferences, int* numPageFaults, int* numTLBHits, int* tlbIndex);
+void checkPageTable(pageTableEntry* pageTable, TLBEntry* TLB, const char* backingStore, char* physicalMemory, const uint8_t pageNumber, pageFrame* freeFrames, const int freeFramesSize, int* numPageFaults, uint8_t* frameNumber, const int counter);
+void storePageInNextFreeFrame(pageTableEntry* pageTable, TLBEntry* TLB, const uint8_t pageNumber, char* physicalMemory, signed char* page, pageFrame* freeFrames, const int freeFramesSize, const int counter);
 void storePage(char* physicalMemory, signed char* page, int index);
-uint8_t findVictimFrame(pageTableEntry* pageTable);
+uint8_t findVictimPage(pageTableEntry* pageTable);
 int checkTLB(TLBEntry* TLB, const uint8_t pageNumber, uint8_t* frameNumber, int* numTLBHits);
 void addEntryToTLB(TLBEntry* TLB, uint8_t pageNumber, uint8_t frameNumber, int* tlbIndex);
+int removeEntryFromTLB(TLBEntry* TLB, const uint8_t pageNumber);
 void populateAddressList(uint16_t* addressList, FILE* fp, int* addressListLength);
 double approxRollingAverage(double avg, double new_sample);
 uint16_t getLower16Bits(int value);
@@ -54,7 +65,7 @@ uint8_t extractPageOffset(uint16_t virtualAddress);
 void printAddressList(uint16_t* addressList, int size);
 void initializePageTable(pageTableEntry* pageTable, int size);
 void initializeTLB(TLBEntry* TLB, int size);
-void initializeFreeFramesList(int* freeFramesList, int size);
+void initializeFreeFramesList(pageFrame* freeFramesList, int size);
 void printPageInformation(uint16_t virtualAddress, uint16_t physicalAddress, signed int value);
 void printStatistics(const int numAddressReferences, const int numPageFaults, const int numTLBHits);
 void readPageFromBackingStore(uint8_t pageNumber, const char* backingStore, signed char* charBuffer);
@@ -149,7 +160,7 @@ void initializePageTable(pageTableEntry* pageTable, int size)
     {
         pageTable[i].address = 0;
         pageTable[i].empty = 1;
-        pageTable[i].lastUpdate = -1;
+        // pageTable[i].lastUpdate = -1;
     }
 }
 
@@ -170,12 +181,12 @@ void initializeTLB(TLBEntry* TLB, int size)
 /**
  * Initializes the free frames list with each value set to 1, which means "free"
  */
-void initializeFreeFramesList(int* freeFramesList, int size)
+void initializeFreeFramesList(pageFrame* freeFramesList, int size)
 {
     int i;
     for (i = 0; i < size; i++)
     {
-        freeFramesList[i] = 1;
+        freeFramesList[i].free = 1;
     }
 }
 
@@ -202,6 +213,27 @@ int checkTLB(TLBEntry* TLB, const uint8_t pageNumber, uint8_t* frameNumber, int*
 }
 
 /**
+ * Checks if a page number is in the TLB, and if so, removes that entry from the TLB
+ * 
+ * Returns 1 if Page Number to be removed was found in the TLB
+ */
+int removeEntryFromTLB(TLBEntry* TLB, const uint8_t pageNumber)
+{
+    // TODO: Possibly parallelize the following loop
+    int i;
+    for (i = 0; i < TLB_SIZE; i++)
+    {
+        if ((!TLB[i].empty) && (TLB[i].pageNumber == pageNumber))
+        {
+            TLB[i].empty = 1;
+            TLB[i].pageNumber = -1;
+            return 1;
+        } 
+    }
+    return 0;
+}
+
+/**
  * Adds an entry to the TLB (Translation Lookaside Buffer)
  * 
  * The replacement strategy for TLB entries is the FIFO 
@@ -219,7 +251,7 @@ void addEntryToTLB(TLBEntry* TLB, uint8_t pageNumber, uint8_t frameNumber, int* 
 /**
  * Simulates virtual memory operation
  */
-void simulateVirtualMemory(uint16_t* addressList, int addressListLength, pageTableEntry* pageTable, TLBEntry* TLB, const char* backingStore, char* physicalMemory, int* freeFrames, const int freeFramesSize, int* numAddressReferences, int* numPageFaults, int* numTLBHits, int* tlbIndex)
+void simulateVirtualMemory(uint16_t* addressList, int addressListLength, pageTableEntry* pageTable, TLBEntry* TLB, const char* backingStore, char* physicalMemory, pageFrame* freeFrames, const int freeFramesSize, int* numAddressReferences, int* numPageFaults, int* numTLBHits, int* tlbIndex)
 {
     int i;
     for (i = 0; i < addressListLength; i++)
@@ -232,7 +264,7 @@ void simulateVirtualMemory(uint16_t* addressList, int addressListLength, pageTab
         if (!checkTLB(TLB, pageNumber, &frameNumber, numTLBHits))
         {
             // Get the frame number from the page table
-            checkPageTable(pageTable, backingStore, physicalMemory, pageNumber, freeFrames, freeFramesSize, numPageFaults, &frameNumber, i);
+            checkPageTable(pageTable, TLB, backingStore, physicalMemory, pageNumber, freeFrames, freeFramesSize, numPageFaults, &frameNumber, i);
 
             // Add entry to TLB
             addEntryToTLB(TLB, pageNumber, frameNumber, tlbIndex);
@@ -258,7 +290,7 @@ void simulateVirtualMemory(uint16_t* addressList, int addressListLength, pageTab
  * 
  * This is done after any TLB miss.
  */
-void checkPageTable(pageTableEntry* pageTable, const char* backingStore, char* physicalMemory, const uint8_t pageNumber, int* freeFrames, const int freeFramesSize, int* numPageFaults, uint8_t* frameNumber, const int counter)
+void checkPageTable(pageTableEntry* pageTable, TLBEntry* TLB, const char* backingStore, char* physicalMemory, const uint8_t pageNumber, pageFrame* freeFrames, const int freeFramesSize, int* numPageFaults, uint8_t* frameNumber, const int counter)
 {
     // If we have a page fault...
     if (pageTable[pageNumber].empty == 1)
@@ -268,20 +300,7 @@ void checkPageTable(pageTableEntry* pageTable, const char* backingStore, char* p
         readPageFromBackingStore(pageNumber, backingStore, page);
 
         // Store the page in the next free frame
-        storePageInNextFreeFrame(pageTable, pageNumber, physicalMemory, page, freeFrames, freeFramesSize, counter);
-
-        // int i;
-        // int j = 0;
-        // for (i = *nextFreeFrame * FRAME_SIZE; i < (*nextFreeFrame * FRAME_SIZE) + FRAME_SIZE; i++)
-        // {
-        //     physicalMemory[i] = page[j];
-        //     j++;
-        // }
-
-        // // Update pageTable, nextFreeFrame, and numPageFaults
-        // pageTable[pageNumber].address = *nextFreeFrame;
-        // pageTable[pageNumber].empty = 0;
-        // (*nextFreeFrame)++;
+        storePageInNextFreeFrame(pageTable, TLB, pageNumber, physicalMemory, page, freeFrames, freeFramesSize, counter);
 
         (*numPageFaults)++;
     }
@@ -293,41 +312,58 @@ void checkPageTable(pageTableEntry* pageTable, const char* backingStore, char* p
 /**
  * Stores a page in the next free frame in physical memory
  */
-void storePageInNextFreeFrame(pageTableEntry* pageTable, const uint8_t pageNumber, char* physicalMemory, signed char* page, int* freeFrames, const int freeFramesSize, const int counter)
+void storePageInNextFreeFrame(pageTableEntry* pageTable, TLBEntry* TLB, const uint8_t pageNumber, char* physicalMemory, signed char* page, pageFrame* freeFrames, const int freeFramesSize, const int counter)
 {
     // Loop over the entire freeFrames list to try and find a free frame
     int i;
     for (i = 0; i < freeFramesSize; i++)
     {
         // If you've found a free frame...
-        if (freeFrames[i])
+        if (freeFrames[i].free)
         {
             // Store the page at frame "i"
             storePage(physicalMemory, page, i);
 
             // Update the freeFramesList
-            freeFrames[i] = 0;
+            freeFrames[i].free = 0;
+            freeFrames[i].lastUpdate = counter;
 
             // Update the pageTable
             pageTable[pageNumber].address = i;
             pageTable[pageNumber].empty = 0;
-            pageTable[pageNumber].lastUpdate = counter;
+            // pageTable[pageNumber].lastUpdate = counter;
 
             return;
         }
     }
 
-    // If there are no free frames, find victimFrame to be replaced
-    uint8_t victimFrameAddress = findVictimFrame(pageTable);
+    printf("Replacing a victim frame!\n");
+
+    // If there are no free frames, find victimPage to be replaced
+    // uint8_t victimPageAddress = findVictimPage(pageTable);
+    int victimPageAddress = findVictimPage(pageTable);
+
+    int j;
+    for (j = 0; j < PAGE_TABLE_SIZE; j++)
+    {
+        printf("pageTable[%d].address = %d, pageTable[%d].empty = %d\n", j, pageTable[j].address, j, pageTable[j].empty);
+    }
+
+    // uint8_t victimFrameAddress = pageTable[victimPageAddress].address;
+    int victimFrameAddress = pageTable[victimPageAddress].address;
 
     // Store the page at that victim frame address
     storePage(physicalMemory, page, victimFrameAddress);
 
-    // Update the freeFramesList
-    freeFrames[victimFrameAddress] = 0;
+    // Update the TLB
+    removeEntryFromTLB(TLB, pageNumber);
 
-    // Update the pageTable
-    pageTable[pageNumber].address = i;
+    /* Update the pageTable */
+    // Update the OLD entry in the page table (the one we just kicked out)
+    pageTable[victimPageAddress].address = -1;
+    pageTable[victimPageAddress].empty = 1;
+    // Update the NEW entry into the page table (the one we're slotting in)
+    pageTable[pageNumber].address = victimFrameAddress;
     pageTable[pageNumber].empty = 0;
     pageTable[pageNumber].lastUpdate = counter;
 }
@@ -336,7 +372,7 @@ void storePageInNextFreeFrame(pageTableEntry* pageTable, const uint8_t pageNumbe
  * Finds a victim page to be replaced 
  * with new page from backing store
  */
-uint8_t findVictimFrame(pageTableEntry* pageTable)
+uint8_t findVictimPage(pageTableEntry* pageTable)
 {
     int minimumLastUpdateTime = 0;
     int minimumLastUpdateIndex = -1;
@@ -352,7 +388,7 @@ uint8_t findVictimFrame(pageTableEntry* pageTable)
     }
 
     // Return the address of the victim frame
-    return pageTable[minimumLastUpdateIndex].address;
+    return minimumLastUpdateIndex;
 } 
 
 /**
@@ -433,7 +469,7 @@ int main(int argc, char** argv)
     int numPageFaults = 0;                                      // ...
     int numTLBHits = 0;                                         // ...
     int numFrames = PHYSICAL_MEMORY_SIZE / PAGE_TABLE_SIZE;     // Initialize free frames list
-    int freeFrames[numFrames];                                  // ...
+    pageFrame freeFrames[numFrames];                            // ...
     initializeFreeFramesList(freeFrames, numFrames);            // ...
 
     // Get the filename from the command line
