@@ -53,6 +53,7 @@ void checkPageTable(pageTableEntry* pageTable, TLBEntry* TLB, const char* backin
 void storePageInNextFreeFrame(pageTableEntry* pageTable, TLBEntry* TLB, const uint8_t pageNumber, char* physicalMemory, signed char* page, pageFrame* freeFrames, const int freeFramesSize, const int counter);
 void storePage(char* physicalMemory, signed char* page, int index);
 uint8_t findVictimPage(pageTableEntry* pageTable);
+uint8_t findVictimFrame(pageTableEntry* pageTable, pageFrame* freeFrames, int numFreeFrames);
 int checkTLB(TLBEntry* TLB, const uint8_t pageNumber, uint8_t* frameNumber, int* numTLBHits);
 void addEntryToTLB(TLBEntry* TLB, uint8_t pageNumber, uint8_t frameNumber, int* tlbIndex);
 int removeEntryFromTLB(TLBEntry* TLB, const uint8_t pageNumber);
@@ -187,6 +188,7 @@ void initializeFreeFramesList(pageFrame* freeFramesList, int size)
     for (i = 0; i < size; i++)
     {
         freeFramesList[i].free = 1;
+        freeFramesList[i].lastUpdate = -1;
     }
 }
 
@@ -331,7 +333,6 @@ void storePageInNextFreeFrame(pageTableEntry* pageTable, TLBEntry* TLB, const ui
             // Update the pageTable
             pageTable[pageNumber].address = i;
             pageTable[pageNumber].empty = 0;
-            // pageTable[pageNumber].lastUpdate = counter;
 
             return;
         }
@@ -339,9 +340,8 @@ void storePageInNextFreeFrame(pageTableEntry* pageTable, TLBEntry* TLB, const ui
 
     printf("Replacing a victim frame!\n");
 
-    // If there are no free frames, find victimPage to be replaced
-    // uint8_t victimPageAddress = findVictimPage(pageTable);
-    int victimPageAddress = findVictimPage(pageTable);
+    // If there are no free frames, find victimFrame to be replaced
+    int victimFrameAddress = findVictimFrame(pageTable, freeFrames, freeFramesSize);
 
     int j;
     for (j = 0; j < PAGE_TABLE_SIZE; j++)
@@ -349,44 +349,48 @@ void storePageInNextFreeFrame(pageTableEntry* pageTable, TLBEntry* TLB, const ui
         printf("pageTable[%d].address = %d, pageTable[%d].empty = %d\n", j, pageTable[j].address, j, pageTable[j].empty);
     }
 
-    // uint8_t victimFrameAddress = pageTable[victimPageAddress].address;
-    int victimFrameAddress = pageTable[victimPageAddress].address;
-
+    // Update the victim page(s)
+    for (j = 0; j < PAGE_TABLE_SIZE; j++)
+    {
+        if (pageTable[i].address == victimFrameAddress)
+        {
+            pageTable[i].address = -1;
+            pageTable[i].empty = 1;
+        }
+    }
+    
     // Store the page at that victim frame address
     storePage(physicalMemory, page, victimFrameAddress);
 
     // Update the TLB
     removeEntryFromTLB(TLB, pageNumber);
 
-    /* Update the pageTable */
-    // Update the OLD entry in the page table (the one we just kicked out)
-    pageTable[victimPageAddress].address = -1;
-    pageTable[victimPageAddress].empty = 1;
+    // Update the free frames list
+    freeFrames[victimFrameAddress].lastUpdate = counter;
+
     // Update the NEW entry into the page table (the one we're slotting in)
     pageTable[pageNumber].address = victimFrameAddress;
     pageTable[pageNumber].empty = 0;
-    pageTable[pageNumber].lastUpdate = counter;
 }
 
 /**
- * Finds a victim page to be replaced 
+ * Finds a victim frame to be replaced 
  * with new page from backing store
  */
-uint8_t findVictimPage(pageTableEntry* pageTable)
+uint8_t findVictimFrame(pageTableEntry* pageTable, pageFrame* freeFrames, int numFrames)
 {
     int minimumLastUpdateTime = 0;
-    int minimumLastUpdateIndex = -1;
+    int minimumLastUpdateIndex = 0;
     int i;
-    // Loop through the page table, finding the lowest "last update" time
-    for (i = 0; i < PAGE_TABLE_SIZE; i++)
+    // Loop through the free frames list table, finding the lowest "last update" time
+    for (i = 0; i < numFrames; i++)
     {
-        if (pageTable[i].lastUpdate < minimumLastUpdateTime)
+        if (freeFrames[i].lastUpdate < minimumLastUpdateTime)
         {
-            minimumLastUpdateTime = pageTable[i].lastUpdate;
+            minimumLastUpdateTime = freeFrames[i].lastUpdate;
             minimumLastUpdateIndex = i;
         }
     }
-
     // Return the address of the victim frame
     return minimumLastUpdateIndex;
 } 
