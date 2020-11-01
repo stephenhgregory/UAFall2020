@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <limits.h>
 
 #define N 1
 #define MAX_LINE_CHARS 10
@@ -161,7 +162,6 @@ void initializePageTable(pageTableEntry* pageTable, int size)
     {
         pageTable[i].address = 0;
         pageTable[i].empty = 1;
-        // pageTable[i].lastUpdate = -1;
     }
 }
 
@@ -188,7 +188,7 @@ void initializeFreeFramesList(pageFrame* freeFramesList, int size)
     for (i = 0; i < size; i++)
     {
         freeFramesList[i].free = 1;
-        freeFramesList[i].lastUpdate = -1;
+        freeFramesList[i].lastUpdate = INT_MAX;
     }
 }
 
@@ -281,6 +281,9 @@ void simulateVirtualMemory(uint16_t* addressList, int addressListLength, pageTab
         // Print the page information
         printPageInformation(addressList[i], physicalAddress, value);
 
+        // Update the free frames list
+        freeFrames[frameNumber].lastUpdate = i;
+
         // Update numAddressReferences
         (*numAddressReferences)++;
     }
@@ -338,19 +341,12 @@ void storePageInNextFreeFrame(pageTableEntry* pageTable, TLBEntry* TLB, const ui
         }
     }
 
-    printf("Replacing a victim frame!\n");
-
+    
     // If there are no free frames, find victimFrame to be replaced
     int victimFrameAddress = findVictimFrame(pageTable, freeFrames, freeFramesSize);
 
-    int j;
-    for (j = 0; j < PAGE_TABLE_SIZE; j++)
-    {
-        printf("pageTable[%d].address = %d, pageTable[%d].empty = %d\n", j, pageTable[j].address, j, pageTable[j].empty);
-    }
-
     // Update the victim page(s)
-    for (j = 0; j < PAGE_TABLE_SIZE; j++)
+    for (i = 0; i < PAGE_TABLE_SIZE; i++)
     {
         if (pageTable[i].address == victimFrameAddress)
         {
@@ -379,7 +375,7 @@ void storePageInNextFreeFrame(pageTableEntry* pageTable, TLBEntry* TLB, const ui
  */
 uint8_t findVictimFrame(pageTableEntry* pageTable, pageFrame* freeFrames, int numFrames)
 {
-    int minimumLastUpdateTime = 0;
+    int minimumLastUpdateTime = INT_MAX;
     int minimumLastUpdateIndex = 0;
     int i;
     // Loop through the free frames list table, finding the lowest "last update" time
