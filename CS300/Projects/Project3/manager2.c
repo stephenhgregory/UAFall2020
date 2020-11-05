@@ -12,10 +12,6 @@
 #define PAGE_TABLE_SIZE 256
 #define TLB_SIZE 16
 #define PHYSICAL_MEMORY_SIZE 32768
-// #define PHYSICAL_MEMORY_SIZE 65536
-
-// // Comment this line of code out when not running from VS Code's debugger
-// #define VSCODE_DEBUG 1
 
 /**
  * Single entry in a page table
@@ -27,7 +23,6 @@ typedef struct pageTableEntry
 {
     uint8_t address;
     int empty;
-    // int lastUpdate;
 } pageTableEntry;
 
 /**
@@ -59,12 +54,10 @@ int checkTLB(TLBEntry* TLB, const uint8_t pageNumber, uint8_t* frameNumber, int*
 void addEntryToTLB(TLBEntry* TLB, uint8_t pageNumber, uint8_t frameNumber, int* tlbIndex);
 int removeEntryFromTLB(TLBEntry* TLB, const uint8_t pageNumber);
 void populateAddressList(uint16_t* addressList, FILE* fp, int* addressListLength);
-double approxRollingAverage(double avg, double new_sample);
 uint16_t getLower16Bits(int value);
 uint16_t combinePageNumberAndOffset(uint8_t pageNumber, uint8_t pageOffset);
 uint8_t extractPageNumber(uint16_t virtualAddress);
 uint8_t extractPageOffset(uint16_t virtualAddress);
-void printAddressList(uint16_t* addressList, int size);
 void initializePageTable(pageTableEntry* pageTable, int size);
 void initializeTLB(TLBEntry* TLB, int size);
 void initializeFreeFramesList(pageFrame* freeFramesList, int size);
@@ -94,18 +87,6 @@ void populateAddressList(uint16_t* addressList, FILE* fp, int* addressListLength
     }
 
     *addressListLength = counter;
-}
-
-/**
- * Calculate the approximate rolling average without
- * storing the total sum of items.
- */
-double approxRollingAverage(double avg, double new_sample) 
-{
-    avg -= avg / N;
-    avg += new_sample / N;
-
-    return avg;
 }
 
 /**
@@ -141,17 +122,6 @@ uint8_t extractPageOffset(uint16_t virtualAddress)
     return (virtualAddress & 0x00FF);
 }
 
-void printAddressList(uint16_t* addressList, const int size)
-{
-    int i;
-    for (i = 0; i < size; i++)
-    {
-        printf("addressList[%d] = %hu, ", i, addressList[i]);
-        printf("Page Number: %d, ", extractPageNumber(addressList[i]));
-        printf("Page Offset: %d\n", extractPageOffset(addressList[i]));
-    }
-}
-
 /**
  * Initializes the page table with addresses set to 0 and "empty" set to 1 (true)
  */
@@ -180,7 +150,10 @@ void initializeTLB(TLBEntry* TLB, int size)
 }
 
 /**
- * Initializes the free frames list with each value set to 1, which means "free"
+ * Initializes the free frames list.
+ * 
+ * The "free" field of each freeFrame is set to 1 (signifying the frame is free).
+ * The "lastUpdate" field of each freeFrame is set to INT_MAX
  */
 void initializeFreeFramesList(pageFrame* freeFramesList, int size)
 {
@@ -196,7 +169,8 @@ void initializeFreeFramesList(pageFrame* freeFramesList, int size)
  * Checks if a page number is in the TLB, and modifies the passed in frameNumber
  * if it is found in the TLB
  * 
- * Returns 1 if Page Number is found in the TLB
+ * Returns 1 if Page Number IS found in the TLB
+ * Returns 0 if Page Number IS NOT found in the TLB
  */
 int checkTLB(TLBEntry* TLB, const uint8_t pageNumber, uint8_t* frameNumber, int* numTLBHits)
 {
@@ -217,7 +191,8 @@ int checkTLB(TLBEntry* TLB, const uint8_t pageNumber, uint8_t* frameNumber, int*
 /**
  * Checks if a page number is in the TLB, and if so, removes that entry from the TLB
  * 
- * Returns 1 if Page Number to be removed was found in the TLB
+ * Returns 1 if Page Number to be removed WAS found in the TLB
+ * Returns 0 if Page Number to be removed WAS NOT found in the TLB
  */
 int removeEntryFromTLB(TLBEntry* TLB, const uint8_t pageNumber)
 {
@@ -418,7 +393,7 @@ void printPageInformation(uint16_t virtualAddress, uint16_t physicalAddress, sig
 }
 
 /**
- * Prints aggregatea statistics about virtual memory operation
+ * Prints aggregate statistics about virtual memory operation
  */
 void printStatistics(const int numAddressReferences, const int numPageFaults, const int numTLBHits)
 {
@@ -473,11 +448,7 @@ int main(int argc, char** argv)
     initializeFreeFramesList(freeFrames, numFrames);            // ...
 
     // Get the filename from the command line
-#ifdef VSCODE_DEBUG
-    char* filename = "addresses.txt";
-#else
     char* filename = argv[1];
-#endif
 
     // Open the file containing addresses
     fp = fopen(filename, "r");
@@ -494,6 +465,7 @@ int main(int argc, char** argv)
     // Simulate the virtual memory operation
     simulateVirtualMemory(addressList, addressListLength, pageTable, TLB, backingStore, physicalMemory, freeFrames, numFrames, &numAddressReferences, &numPageFaults, &numTLBHits, &tlbIndex);
 
+    // Print final aggregate statistics about virtual memory operation
     printStatistics(numAddressReferences, numPageFaults, numTLBHits);
 
     return 0;

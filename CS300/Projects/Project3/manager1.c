@@ -12,9 +12,6 @@
 #define TLB_SIZE 16
 #define PHYSICAL_MEMORY_SIZE 65536
 
-// // Comment this line of code out when not running from VS Code's debugger
-// #define VSCODE_DEBUG 1
-
 /**
  * Single entry in a page table
  */
@@ -39,12 +36,10 @@ void checkPageTable(pageTableEntry* pageTable, const char* backingStore, char* p
 int checkTLB(TLBEntry* TLB, const uint8_t pageNumber, uint8_t* frameNumber, int* numTLBHits);
 void addEntryToTLB(TLBEntry* TLB, uint8_t pageNumber, uint8_t frameNumber, int* tlbIndex);
 void populateAddressList(uint16_t* addressList, FILE* fp, int* addressListLength);
-double approxRollingAverage(double avg, double new_sample);
 uint16_t getLower16Bits(int value);
 uint16_t combinePageNumberAndOffset(uint8_t pageNumber, uint8_t pageOffset);
 uint8_t extractPageNumber(uint16_t virtualAddress);
 uint8_t extractPageOffset(uint16_t virtualAddress);
-void printAddressList(uint16_t* addressList, int size);
 void initializePageTable(pageTableEntry* pageTable, int size);
 void initializeTLB(TLBEntry* TLB, int size);
 void printPageInformation(uint16_t virtualAddress, uint16_t physicalAddress, signed int value);
@@ -72,18 +67,6 @@ void populateAddressList(uint16_t* addressList, FILE* fp, int* addressListLength
     }
 
     *addressListLength = counter;
-}
-
-/**
- * Calculate the approximate rolling average without
- * storing the total sum of items.
- */
-double approxRollingAverage(double avg, double new_sample) 
-{
-    avg -= avg / N;
-    avg += new_sample / N;
-
-    return avg;
 }
 
 /**
@@ -117,17 +100,6 @@ uint8_t extractPageNumber(uint16_t virtualAddress)
 uint8_t extractPageOffset(uint16_t virtualAddress)
 {
     return (virtualAddress & 0x00FF);
-}
-
-void printAddressList(uint16_t* addressList, const int size)
-{
-    int i;
-    for (i = 0; i < size; i++)
-    {
-        printf("addressList[%d] = %hu, ", i, addressList[i]);
-        printf("Page Number: %d, ", extractPageNumber(addressList[i]));
-        printf("Page Offset: %d\n", extractPageOffset(addressList[i]));
-    }
 }
 
 /**
@@ -276,6 +248,9 @@ void printPageInformation(uint16_t virtualAddress, uint16_t physicalAddress, sig
     printf("Virtual address: %d Physical address: %d, Value: %d\n", virtualAddress, physicalAddress, value);
 }
 
+/**
+ * Prints aggregate statistics about virtual memory operation
+ */
 void printStatistics(const int numAddressReferences, const int numPageFaults, const int numTLBHits)
 {
     double pageFaultRate = (double)numPageFaults / numAddressReferences;
@@ -326,11 +301,7 @@ int main(int argc, char** argv)
     int numTLBHits = 0;                                         // ...
 
     // Get the filename from the command line
-#ifdef VSCODE_DEBUG
-    char* filename = "addresses.txt";
-#else
     char* filename = argv[1];
-#endif
 
     // Open the file containing addresses
     fp = fopen(filename, "r");
@@ -347,6 +318,7 @@ int main(int argc, char** argv)
     // Simulate the virtual memory operation
     simulateVirtualMemory(addressList, addressListLength, pageTable, TLB, backingStore, physicalMemory, &numAddressReferences, &numPageFaults, &numTLBHits, &tlbIndex);
 
+    // Print final aggregate statistics about virtual memory operation
     printStatistics(numAddressReferences, numPageFaults, numTLBHits);
 
     return 0;
