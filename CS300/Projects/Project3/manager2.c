@@ -414,7 +414,7 @@ void storePage(char* physicalMemory, signed char* page, int index)
  */
 void printPageInformation(uint16_t virtualAddress, uint16_t physicalAddress, signed int value)
 {
-    printf("Virtual address: %d Physical address: %d Value: %d\n", virtualAddress, physicalAddress, value);
+    printf("Virtual address: %d Physical address: %d, Value: %d\n", virtualAddress, physicalAddress, value);
 }
 
 /**
@@ -425,7 +425,7 @@ void printStatistics(const int numAddressReferences, const int numPageFaults, co
     double pageFaultRate = (double)numPageFaults / numAddressReferences;
     double TLBHitRate = (double)numTLBHits / numAddressReferences;
 
-    printf("Number of translated addresses = %d\n", numAddressReferences);
+    printf("Number of Translated Addresses = %d\n", numAddressReferences);
     printf("Page Faults = %d\n", numPageFaults);
     printf("Page Fault Rate = %.3f\n", pageFaultRate);
     printf("TLB Hits = %d\n", numTLBHits);

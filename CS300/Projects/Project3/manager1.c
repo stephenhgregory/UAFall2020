@@ -54,7 +54,6 @@ void readPageFromBackingStore(uint8_t pageNumber, const char* backingStore, sign
 /**
  * Reads a list of addresses from a file through the passed-in FILE pointer,
  * and adds all of them into the passed-in address_list.
- * 
  */
 void populateAddressList(uint16_t* addressList, FILE* fp, int* addressListLength)
 {
@@ -88,7 +87,7 @@ double approxRollingAverage(double avg, double new_sample)
 }
 
 /**
- * Returns the lower 16 bits of a 32 bit integer
+ * Returns the lower 16 bits of a 32-bit integer
  */
 uint16_t getLower16Bits(int value)
 {
@@ -274,7 +273,7 @@ void checkPageTable(pageTableEntry* pageTable, const char* backingStore, char* p
  */
 void printPageInformation(uint16_t virtualAddress, uint16_t physicalAddress, signed int value)
 {
-    printf("Virtual address: %d Physical address: %d Value: %d\n", virtualAddress, physicalAddress, value);
+    printf("Virtual address: %d Physical address: %d, Value: %d\n", virtualAddress, physicalAddress, value);
 }
 
 void printStatistics(const int numAddressReferences, const int numPageFaults, const int numTLBHits)
@@ -282,7 +281,7 @@ void printStatistics(const int numAddressReferences, const int numPageFaults, co
     double pageFaultRate = (double)numPageFaults / numAddressReferences;
     double TLBHitRate = (double)numTLBHits / numAddressReferences;
 
-    printf("Number of translated addresses = %d\n", numAddressReferences);
+    printf("Number of Translated Addresses = %d\n", numAddressReferences);
     printf("Page Faults = %d\n", numPageFaults);
     printf("Page Fault Rate = %.3f\n", pageFaultRate);
     printf("TLB Hits = %d\n", numTLBHits);
