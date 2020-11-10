@@ -105,3 +105,5 @@ in the page. Therefore, there are ```2^13 = 8192 bytes``` in the page.
 1. Outer Page
 2. Inner Page
 3. Offset
+
+

@@ -36,6 +36,7 @@
 
 ## 7.9
 ### What are the two functions used with mutex locks?
+- `acquire()` and `release()`
 
 ## 7.10
 ### True or False? A spinlock is a type of mutex lock
@@ -44,8 +45,6 @@ True! A spinlock is a simple kind of mutex lock, wherein a process trying to get
 ## 7.11
 ### True or False? Semaphores can provide the same functionality as mutex locks
 True, but semaphores are more sophisticated. A binary semaphore can be used in place of a mutex lock to provide mutual exclusion.
-
-
 
 
 ## 7.14
