@@ -109,5 +109,42 @@
 ### Consider a file system on a disk that has both logical and physical block sizes of 512 bytes. Assume that the information about each file is already in memory. For each of the three allocation strategies (contiguous, linked, and indexed), answer these questions: 
 ### 1. How is the logical-to-physical address mapping accomplished in this system? (For the indexed allocation, assume that a file is always less than 512 blocks long.) 
 ### 2. If we are currently at logical block 10 (the last block accessed was block 10) and want to access logical block 4, how many physical blocks must be read from the disk? 
+- 1.
+  - Contiguous: Divide the logical address by 512 to get X, the quotient, and Y, the remainder. X in this case is the physical block number, and Y is the displacement into that block.
+  - Linked: Divide the logical address by 511 to get X, the quotient, and Y, the remainder. Chase down the linked list (getting X + 1 blocks). Y + 1 is the displacement into that block.
+  - Indexed: Divide the logical address by 512 to get X, the quotient, and Y, the remainder. Get the index block into memory. The physical block address is contained at position X in the index block, which is now in memory. Y is the displacement into that block.
+- 2. 
+  - Contiguous: 1
+  - Linked: 4
+  - Indexed: 2
+
+## 14.15
+### Consider a file system that uses inodes to represent files. Disk blocks are 8 KB in size, and a pointer to a disk block requires 4 bytes. This file system has 12 direct disk blocks, as well as single, double, and triple indirect disk blocks. What is the maximum size of a file that can be stored in this file system? 
+- `(12 * 8KB) + (2048 * 8KB) + (2048 * 2048 * 8KB) + (2048 * 2048 * 2048 * 8KB)`
+
+## 14.16
+### Fragmentation on a storage device can be eliminated through compaction. Typical disk devices do not have relocation or base registers (such as those used when memory is to be compacted), so how can we relocate files? Give three reasons why compacting and relocating files are often avoided. 
+- One method of achieving compaction is simply to copy the entire file system onto another mass storage medium. By traversing through the directory structure and copying the entire file system onto the new device, then simply deleting the previous storage device, you have achieved compaction effectively. Note that this method requires another storage medium.
+- Relocation of files on secondary storage involves lots of overhead. Data blocks need to be written out to main memory, and then written back out to their new locations. Furthermore, relocation registers apply only to sequential files, and most disk files are not sequential. For this same reason, many new files will not require contiguous disk space, and even sequential files can be allocated noncontiguous blocks if links between logically sequential blocks are maintained by the disk system.
+
+## 14.17
+### Explain why logging metadata updates ensures recovery of a file system after a file-system crash. 
+- Logging metadata allows that a file system after a crash can check whether its metadata matches its current state, and if not, it can roll-back the changes made to the latest state specified by the metadata. Essentially, the device can determine all metadata updates that did not finish, and can then undo those updates to restore state.
+
+## 14.18
+### Consider the following backup scheme:
+### Day 1: Copy to a backup medium all files from disk
+### Day 2: Copy to another medium all files changed since Day 1
+### Day 3: Copy to another medium all files changed since Day 1
+### This differs from the schedule given in Section 14.7.4 by having all subsequent backups copy all files modified since the first full backup. What are the benefits of this system over the one in Section 14.7.4? What are the drawbacks? Are restore operations made easier or more difficult? Explain your answer. 
+- In section **14.7.4**, each subsequent backup only changes what has changed since the previous backup, rather than the first full backup. With this new system, restore operations may in fact be easier than before, as recovery should not require piecing together file information from several storage media. In fact, only 2 backups (last full backup and most recent subsequent backup) are necessary for a full restoration. However, this method uses more storage space than the previous method, and is slower than the previous method, as more data needs to be copied and restored.
+
+## 14.19
+### Discuss the advantages and disadvantages of associating with remote file systems (stored on file servers) a set of failure semantics different  from those associated with local file systems. 
+- The advantage is that the application can deal with the failure conditions in a more intelligent way if it realizes that the error is coming from a remote file system. For example, the application could simply abort/ignore a failed operation on a remote file server instead of hanging when accessing a remote file on a failed server. If the application didn't know that the error was originating from a remote file server, it may simply hang, which may cause the entire application to hang, which is obviously undesirable. The disadvantage however is the lack of uniformity in failure semantics and resulting increase of complexity in application code.
+
+## 14.20
+### What are the implications of supporting UNIX consistency semantics for shared access to files stored on remote file systems? 
+- If you need POSIX consistency then you need to have coordination between nodes accessing the same data or you need to force every single IO to serialize against some global resource (typically the backend). Distributed coordination is complex to introduce at scale (there are many schemes of distributed lock managers, all of them have drawbacks). Serializing every IO to the backend store is expensive, especially for small IO operations due to latencies (e.g. nothing can be cached). However, these POSIX consistencies simplify application logic for the programmer greatly. It is very easy to reason about. Relaxing POSIX usually means that the application developer needs to implement their own logic to ensure consistency (ordering, durability, etc.) Some applications can function reliably without consistency, they are typically free of collisions in the data model (e.g. 100% read-only or completely parallel)
 
 
