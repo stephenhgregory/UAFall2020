@@ -15,6 +15,7 @@ class ForceMapper():
         self.min_velocity = -0.2
         self.max_range = 5
         self.turn_right_probability = 0.5
+        self.at_start = True
         # self.currently_stopped_and_turning = True
         # self.turning_direction = 'left'
         self.currently_stopped_and_turning = False
@@ -29,7 +30,7 @@ class ForceMapper():
 
     def forward_slight_left(self):
         self.move_cmd.linear.x = self.linear_speed
-        self.move_cmd.angular.z = -0.2
+        self.move_cmd.angular.z = 0.1
 
     def turn_stochastically(self, right_probability):
         if random.random() < right_probability:
@@ -72,6 +73,15 @@ class ForceMapper():
         elif self.turning_direction == 'left':
             self.turn_left()
 
+    def start_behavior(self, msg):
+        size = len(msg.ranges)
+        front = msg.ranges[size/2]
+
+        if (front < 5):
+            self.turn_left()
+        else:
+            self.at_start = False
+
     def master_behavior(self, msg):
         size = len(msg.ranges)
         right = msg.ranges[0]
@@ -110,7 +120,8 @@ class ForceMapper():
 
         else:
             self.stop_turning()
-            self.forward_slight_left()
+            # self.forward_slight_left()
+            self.forward()
         
     def start(self):
         while not rospy.is_shutdown():
@@ -118,7 +129,10 @@ class ForceMapper():
             self.r.sleep()
 
     def callBack(self, msg):
-        self.master_behavior(msg)
+        if self.at_start:
+            self.start_behavior(msg)
+        else:
+            self.master_behavior(msg)
 
 
 def main():
